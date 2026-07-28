@@ -1,26 +1,13 @@
-/**
- * Read / write `url` & `path` from the query string.
- *
- * Credentials and the known-host list live in Alpine `$persist` state; the only storage
- * concern left here is migrating credentials written by earlier versions.
- */
-
 const LEGACY_CREDENTIALS_PREFIX = "webdav-index:creds:";
 const URL_PARAM = "url";
 const PATH_PARAM = "path";
 
-/**
- * @returns {string|null} Normalized base URL with trailing slash, or null if missing/invalid
- */
 export function getWebdavBaseUrl() {
   const raw = new URLSearchParams(window.location.search).get(URL_PARAM);
   return normalizeBaseUrl(raw);
 }
 
-/**
- * @param {string|null|undefined} value
- * @returns {string|null}
- */
+/** Rejects non-http(s) URLs; the result always ends with a slash. */
 export function normalizeBaseUrl(value) {
   if (!value || typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -36,17 +23,13 @@ export function normalizeBaseUrl(value) {
   }
 }
 
-/**
- * Normalize a directory path: leading `/`, directories end with `/`, root is `/`.
- * @param {string|null|undefined} value
- * @returns {string}
- */
+/** Directory path convention: leading `/`, trailing `/`, root is `/`. */
 export function normalizePath(value) {
   let p = value || "/";
   try {
     p = decodeURIComponent(p);
   } catch {
-    // keep as-is
+    // not valid percent-encoding, keep as-is
   }
   if (!p.startsWith("/")) p = "/" + p;
   p = p.replace(/\/+/g, "/");
@@ -54,11 +37,6 @@ export function normalizePath(value) {
   return p;
 }
 
-/**
- * Build pathname + search for the app (no hash).
- * @param {{ webdavBaseUrl?: string|null, path?: string|null }} [overrides]
- * @returns {string}
- */
 export function buildAppSearch(overrides = {}) {
   const params = new URLSearchParams(window.location.search);
 
@@ -83,45 +61,28 @@ export function buildAppSearch(overrides = {}) {
   return window.location.pathname + (qs ? "?" + qs : "");
 }
 
-/**
- * Write `url` into the query string via replaceState; keep current path.
- * @param {string} baseUrl
- */
 export function setWebdavBaseUrlInQuery(baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl);
   if (!normalized) return;
   window.history.replaceState(null, "", buildAppSearch({ webdavBaseUrl: normalized }));
 }
 
-/**
- * Switch active host in the query string and reset path to `/`.
- * @param {string} baseUrl
- */
 export function setActiveHostInQuery(baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl);
   if (!normalized) return;
   window.history.replaceState(null, "", buildAppSearch({ webdavBaseUrl: normalized, path: "/" }));
 }
 
-/**
- * Current directory path from `path` query param.
- * @returns {string}
- */
 export function getPath() {
   const raw = new URLSearchParams(window.location.search).get(PATH_PARAM);
   return normalizePath(raw || "/");
 }
 
-/**
- * Navigate to a directory path via `path` query param, using pushState so the browser
- * back button works.
- * @param {string} path Directory path like `/photos/2024/`
- * @param {{ replace?: boolean }} [options]
- */
 export function setPath(path, options = {}) {
   const next = normalizePath(path);
   const href = buildAppSearch({ path: next });
 
+  // pushState, so directory navigation is undoable with the browser back button.
   if (options.replace || next === getPath()) {
     window.history.replaceState(null, "", href);
   } else {
@@ -132,12 +93,9 @@ export function setPath(path, options = {}) {
 /**
  * Fold credentials stored under the old per-URL keys (`webdav-index:creds:<url>`) into a
  * single object and drop the old keys, so saved logins survive the storage change.
- * @returns {Record<string, { username: string, password: string }>}
  */
 export function takeLegacyCredentials() {
-  /** @type {Record<string, { username: string, password: string }>} */
   const migrated = {};
-  /** Only keys whose credentials made it across are removed; nothing is dropped blindly. */
   const movedKeys = [];
 
   for (let i = 0; i < localStorage.length; i += 1) {

@@ -20,19 +20,18 @@ Alpine.data("app", () => ({
   /** Active WebDAV base URL, or null when there is no session. */
   baseUrl: null,
   path: "/",
-  /** @type {import('./webdav.js').WebDavEntry[]} */
   entries: [],
   loading: false,
   errorMessage: "",
   /** Incremented per load so a superseded request cannot clobber newer state. */
   loadToken: 0,
 
-  /** Known hosts, most recently used first. Same storage key and JSON shape as before. */
+  /** Known hosts, most recently used first. */
   hosts: Alpine.$persist([]).as("webdav-index:hosts"),
   /** `{ [baseUrl]: { username, password } }` */
   credentials: Alpine.$persist({}).as("webdav-index:creds"),
 
-  /** Bootstrap color mode; the inline snippet in index.html already applied it to `<html>`. */
+  /** The inline snippet in index.html already applied this to `<html>`. */
   theme: resolveTheme(),
 
   form: { url: "", username: "", password: "" },
@@ -41,7 +40,6 @@ Alpine.data("app", () => ({
   connectHint: "",
   connectCancellable: false,
   showValidation: false,
-  /** @type {any} Bootstrap Modal instance */
   modal: null,
 
   formatMtime,
@@ -88,10 +86,6 @@ Alpine.data("app", () => ({
     storeTheme(this.theme);
   },
 
-  /**
-   * @param {string|null} baseUrl
-   * @returns {{ username: string, password: string }|null}
-   */
   credentialsFor(baseUrl) {
     const entry = baseUrl ? this.credentials[baseUrl] : null;
     if (!entry || typeof entry.username !== "string" || typeof entry.password !== "string") {
@@ -100,16 +94,11 @@ Alpine.data("app", () => ({
     return { username: entry.username, password: entry.password };
   },
 
-  /** @param {string} baseUrl */
   rememberHost(baseUrl) {
     if (this.hosts[0] === baseUrl) return;
     this.hosts = [baseUrl, ...this.hosts.filter((host) => host !== baseUrl)];
   },
 
-  /**
-   * Drop a host along with its saved credentials.
-   * @param {string} baseUrl
-   */
   forgetHost(baseUrl) {
     this.hosts = this.hosts.filter((host) => host !== baseUrl);
     delete this.credentials[baseUrl];
@@ -130,9 +119,6 @@ Alpine.data("app", () => ({
     );
   },
 
-  /**
-   * @param {{ prefillUrl?: string|null, cancellable?: boolean }} [options]
-   */
   openConnect(options = {}) {
     const { prefillUrl = null, cancellable = false } = options;
     const fromQuery = getWebdavBaseUrl();
@@ -200,10 +186,7 @@ Alpine.data("app", () => ({
     }
   },
 
-  /**
-   * Switch to another known host; resets the path to `/`.
-   * @param {string} host
-   */
+  /** Switch to another known host; resets the path to `/`. */
   switchHost(host) {
     const baseUrl = normalizeBaseUrl(host);
     if (!baseUrl || baseUrl === this.baseUrl) return;
@@ -234,13 +217,11 @@ Alpine.data("app", () => ({
     this.openConnect();
   },
 
-  /** @param {string} path */
   navigate(path) {
     setPath(path);
     this.load();
   },
 
-  /** @param {import('./webdav.js').WebDavEntry} entry */
   openEntry(entry) {
     if (entry.isCollection) {
       this.navigate(entry.relativePath);
@@ -284,11 +265,7 @@ Alpine.data("app", () => ({
     }
   },
 
-  /**
-   * Stale credentials: drop them, fall back to another signed-in host if there is one.
-   * @param {string} baseUrl
-   * @param {Error} err
-   */
+  /** Stale credentials: drop them, fall back to another signed-in host if there is one. */
   handleAuthFailure(baseUrl, err) {
     this.forgetHost(baseUrl);
     const remaining = this.signedInHosts;
@@ -296,7 +273,6 @@ Alpine.data("app", () => ({
     this.entries = [];
 
     if (remaining.length > 0) {
-      // `switchHost` starts a fresh load, which manages `loading` itself.
       this.switchHost(remaining[0]);
       return;
     }
