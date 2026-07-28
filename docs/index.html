@@ -16,9 +16,17 @@
     integrity="sha384-jA0ZEVHvzHglub9HHaD1lcLnJSfXbHmF3ob0icTH8T6WxiRuLV94rQWuA1/Arn8k" crossorigin="anonymous">
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/pretty-bytes@7.1.1/index.js"
     integrity="sha384-kf7icmuinvJkHQyk9s6thyk5sg/byAieoxTfSaZL1uvmG1M4+sNNSnGcKmf5Ohl7" crossorigin="anonymous">
+  <!-- Applies the color mode before the first paint; js/theme.js owns the storage key. -->
+  <script>
+    (() => {
+      const stored = localStorage.getItem("webdav-index:theme");
+      const dark = stored ? stored === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-bs-theme", dark ? "dark" : "light");
+    })();
+  </script>
 </head>
 
-<body x-data="app">
+<body class="bg-body-tertiary" x-data="app">
   <svg xmlns="http://www.w3.org/2000/svg" style="display: none" aria-hidden="true">
     <symbol id="icon-folder" viewBox="0 0 16 16">
       <path
@@ -32,101 +40,130 @@
       <path
         d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z" />
     </symbol>
+    <symbol id="icon-sun" viewBox="0 0 16 16">
+      <path
+        d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708" />
+    </symbol>
+    <symbol id="icon-moon" viewBox="0 0 16 16">
+      <path
+        d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278" />
+      <path
+        d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.73 1.73 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.73 1.73 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.73 1.73 0 0 0 1.097-1.097zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z" />
+    </symbol>
   </svg>
 
-  <nav class="navbar navbar-expand navbar-light bg-white border-bottom sticky-top">
+  <nav class="navbar navbar-expand bg-body border-bottom sticky-top">
     <div class="container-fluid px-3 px-md-4">
-      <span class="navbar-brand mb-0 h1 fs-5">WebDAV Index</span>
-      <div class="dropdown" x-show="baseUrl" x-cloak>
-        <button type="button"
-          class="btn btn-link btn-sm text-secondary text-decoration-none dropdown-toggle text-truncate nav-host-btn"
-          id="nav-host-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Server menu">
-          <span x-text="baseUrl"></span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end nav-host-menu" aria-labelledby="nav-host-btn">
-          <template x-for="host in hosts" :key="host">
+      <span class="navbar-brand mb-0 fs-5 fw-semibold">WebDAV Index</span>
+      <div class="navbar-actions d-flex align-items-center gap-2 ms-auto">
+        <div class="dropdown" x-show="baseUrl" x-cloak>
+          <button type="button"
+            class="btn btn-sm btn-link text-body-secondary text-decoration-none dropdown-toggle text-truncate mw-100"
+            id="nav-host-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Server menu">
+            <span x-text="baseUrl"></span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end host-menu" aria-labelledby="nav-host-btn">
+            <template x-for="host in hosts" :key="host">
+              <li>
+                <button type="button" class="dropdown-item d-flex align-items-center gap-2"
+                  :class="{ active: host === baseUrl }" :title="host" @click="switchHost(host)">
+                  <span class="text-truncate" x-text="host"></span>
+                  <svg class="app-icon ms-auto" aria-hidden="true" x-show="host === baseUrl">
+                    <use href="#icon-check" />
+                  </svg>
+                </button>
+              </li>
+            </template>
             <li>
-              <button type="button" class="dropdown-item nav-host-item" :class="{ active: host === baseUrl }"
-                :title="host" @click="switchHost(host)">
-                <span class="nav-host-item-label" x-text="host"></span>
-                <svg class="app-icon nav-host-item-check" aria-hidden="true" x-show="host === baseUrl">
-                  <use href="#icon-check" />
-                </svg>
-              </button>
+              <hr class="dropdown-divider">
             </li>
-          </template>
-          <li>
-            <hr class="dropdown-divider my-1">
-          </li>
-          <li>
-            <button type="button" class="dropdown-item" @click="openConnectAnother()">Connect another ...</button>
-          </li>
-          <li>
-            <button type="button" class="dropdown-item" @click="signOut()">Sign out</button>
-          </li>
-        </ul>
+            <li>
+              <button type="button" class="dropdown-item" @click="openConnectAnother()">Connect another</button>
+            </li>
+            <li>
+              <button type="button" class="dropdown-item" @click="signOut()">Sign out</button>
+            </li>
+          </ul>
+        </div>
+        <button type="button" class="btn btn-sm btn-link text-body-secondary text-decoration-none" x-cloak
+          :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'" @click="toggleTheme()">
+          <svg class="app-icon" aria-hidden="true">
+            <use :href="theme === 'dark' ? '#icon-sun' : '#icon-moon'" />
+          </svg>
+        </button>
       </div>
     </div>
   </nav>
 
   <main class="container-fluid px-3 px-md-4 py-3">
-    <nav aria-label="breadcrumb" class="mb-3" x-show="baseUrl" x-cloak>
-      <ol class="breadcrumb mb-0">
-        <template x-for="crumb in crumbs" :key="crumb.path">
-          <li class="breadcrumb-item" :class="{ active: crumb.isLast }" :aria-current="crumb.isLast ? 'page' : false">
-            <template x-if="crumb.isLast">
-              <span x-text="crumb.label"></span>
+    <div class="card overflow-hidden shadow-sm" x-show="baseUrl" x-cloak>
+      <div class="card-header bg-body-tertiary py-2">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0 small">
+            <template x-for="crumb in crumbs" :key="crumb.path">
+              <li class="breadcrumb-item" :class="{ active: crumb.isLast }"
+                :aria-current="crumb.isLast ? 'page' : false">
+                <template x-if="crumb.isLast">
+                  <span x-text="crumb.label"></span>
+                </template>
+                <template x-if="!crumb.isLast">
+                  <a class="link-underline link-underline-opacity-0 link-underline-opacity-100-hover" :href="crumb.href"
+                    x-text="crumb.label" @click.prevent="navigate(crumb.path)"></a>
+                </template>
+              </li>
             </template>
-            <template x-if="!crumb.isLast">
-              <a :href="crumb.href" x-text="crumb.label" @click.prevent="navigate(crumb.path)"></a>
-            </template>
-          </li>
-        </template>
-      </ol>
-    </nav>
-
-    <div class="text-center py-5" role="status" x-show="loading" x-cloak>
-      <div class="spinner-border text-secondary" role="status">
-        <span class="visually-hidden">Loading...</span>
+          </ol>
+        </nav>
       </div>
-      <div class="mt-2 text-muted small">Loading directory ...</div>
-    </div>
 
-    <div class="alert alert-danger mb-0" role="alert" x-show="errorMessage" x-cloak x-text="errorMessage"></div>
+      <div class="card-body text-center py-5" role="status" x-show="loading" x-cloak>
+        <div class="spinner-border text-body-secondary" role="status">
+          <span class="visually-hidden">Loading ......</span>
+        </div>
+        <div class="mt-2 text-body-secondary small">Loading directory ......</div>
+      </div>
 
-    <div class="table-responsive" x-show="baseUrl && !loading && !errorMessage" x-cloak>
-      <table class="table table-hover align-middle mb-0 listing-table">
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col" class="col-mtime">Last Modified</th>
-            <th scope="col" class="col-size">Size</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="entry in entries" :key="entry.relativePath">
+      <div class="card-body" x-show="errorMessage" x-cloak>
+        <div class="alert alert-danger mb-0" role="alert" x-text="errorMessage"></div>
+      </div>
+
+      <div class="table-responsive" x-show="!loading && !errorMessage" x-cloak>
+        <table class="table table-hover align-middle mb-0">
+          <thead>
             <tr>
-              <td class="col-name">
-                <a href="#" class="listing-link" @click.prevent="openEntry(entry)">
-                  <svg :class="`app-icon me-2 ${entry.isCollection ? 'text-warning' : 'text-secondary'}`"
-                    aria-hidden="true">
-                    <use :href="entry.isCollection ? '#icon-folder' : '#icon-file'" />
-                  </svg>
-                  <span x-text="entry.isCollection ? `${entry.name}/` : entry.name"></span>
-                </a>
-              </td>
-              <td class="col-mtime text-nowrap text-secondary" x-text="formatMtime(entry.lastModified)"></td>
-              <td class="col-size text-nowrap text-secondary"
-                x-text="entry.isCollection ? '-' : formatSize(entry.size)"></td>
+              <th scope="col">Name</th>
+              <th scope="col" class="col-mtime d-none d-sm-table-cell">Last Modified</th>
+              <th scope="col" class="col-size">Size</th>
             </tr>
-          </template>
-          <template x-if="entries.length === 0">
-            <tr>
-              <td colspan="3" class="text-muted text-center py-4">(empty)</td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <template x-for="entry in entries" :key="entry.relativePath">
+              <tr>
+                <td>
+                  <a href="#"
+                    class="d-inline-flex align-items-center text-break link-body-emphasis link-underline-opacity-0 link-underline-opacity-100-hover"
+                    @click.prevent="openEntry(entry)">
+                    <svg :class="`app-icon me-2 ${entry.isCollection ? 'text-warning' : 'text-body-secondary'}`"
+                      aria-hidden="true">
+                      <use :href="entry.isCollection ? '#icon-folder' : '#icon-file'" />
+                    </svg>
+                    <span x-text="entry.isCollection ? `${entry.name}/` : entry.name"></span>
+                  </a>
+                </td>
+                <td class="col-mtime d-none d-sm-table-cell text-nowrap text-body-secondary small"
+                  x-text="formatMtime(entry.lastModified)"></td>
+                <td class="col-size text-nowrap text-body-secondary small"
+                  x-text="entry.isCollection ? '-' : formatSize(entry.size)"></td>
+              </tr>
+            </template>
+            <template x-if="entries.length === 0">
+              <tr>
+                <td colspan="3" class="text-body-secondary text-center py-4">(empty)</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 
@@ -137,14 +174,14 @@
       <div class="modal-content">
         <form novalidate x-ref="connectForm" :class="{ 'was-validated': showValidation }" @submit.prevent="connect()">
           <div class="modal-header">
-            <h5 class="modal-title" id="connect-modal-title">Connect to WebDAV</h5>
+            <h1 class="modal-title fs-5" id="connect-modal-title">Connect to WebDAV</h1>
           </div>
           <div class="modal-body">
-            <p class="text-muted small mb-3" x-text="connectHint"></p>
+            <p class="text-body-secondary small mb-3" x-text="connectHint"></p>
             <div class="mb-3">
               <label for="input-webdav-url" class="form-label">WebDAV URL</label>
               <input type="url" class="form-control" id="input-webdav-url" name="url"
-                placeholder="https://dav.example.com/files/" required autocomplete="url" x-ref="inputUrl"
+                placeholder="https://webdav.example.com/files/" required autocomplete="url" x-ref="inputUrl"
                 x-model="form.url" @input="syncUrlValidity()">
               <div class="invalid-feedback">Please enter a valid http(s) URL</div>
             </div>

@@ -1,28 +1,6 @@
-:root {
-  --listing-row-min-height: 2.75rem;
-  --app-bg: #f7f8fa;
-  --app-surface: #ffffff;
-  --app-border: #e5e7eb;
-}
-
-html,
-body {
-  min-height: 100%;
-}
-
 /* Keep Alpine-driven regions hidden until the component is initialized. */
 [x-cloak] {
   display: none !important;
-}
-
-body {
-  background: var(--app-bg);
-  color: #1f2937;
-}
-
-.navbar-brand {
-  font-weight: 600;
-  letter-spacing: -0.01em;
 }
 
 .app-icon {
@@ -33,139 +11,21 @@ body {
   flex: 0 0 auto;
 }
 
-.listing-table {
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: 0;
-  overflow: hidden;
-  --bs-table-bg: var(--app-surface);
-}
-
-.listing-table thead th {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6b7280;
-  font-weight: 600;
-  border-bottom-width: 1px;
-  white-space: nowrap;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-
-.listing-table tbody td {
-  vertical-align: middle;
-  min-height: var(--listing-row-min-height);
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
-}
-
-.listing-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.25rem;
-  color: inherit;
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.listing-link:hover {
-  color: var(--bs-primary);
-  text-decoration: underline;
-}
-
-.breadcrumb {
-  flex-wrap: wrap;
-  row-gap: 0.25rem;
-}
-
-.breadcrumb-item a {
-  text-decoration: none;
-}
-
-.breadcrumb-item a:hover {
-  text-decoration: underline;
-}
-
 .col-mtime {
   width: 11rem;
 }
 
 .col-size {
-  width: 6.5rem;
+  width: 7rem;
 }
 
-@media (max-width: 575.98px) {
-  .listing-table thead th {
-    font-size: 0.7rem;
-  }
-
-  .col-mtime {
-    width: 7.5rem;
-    font-size: 0.8rem;
-  }
-
-  .col-size {
-    width: 4.5rem;
-    font-size: 0.8rem;
-  }
-
-  .listing-link {
-    min-height: 2.5rem;
-  }
-}
-
-.nav-host-btn {
-  max-width: min(70vw, 36rem);
-  padding: 0.15rem 0.25rem;
-  font-size: 0.8125rem;
-  line-height: 1.25;
-}
-
-.nav-host-menu {
-  --bs-dropdown-min-width: 12rem;
-  --bs-dropdown-font-size: 0.8125rem;
-  --bs-dropdown-padding-y: 0.2rem;
-  --bs-dropdown-spacer: 0.15rem;
-  --bs-dropdown-border-radius: 0;
-  --bs-dropdown-border-color: var(--app-border);
-  --bs-dropdown-item-padding-x: 0.5rem;
-  --bs-dropdown-item-padding-y: 0.2rem;
-  max-width: min(90vw, 36rem);
-}
-
-.nav-host-menu .dropdown-item {
-  color: #6c757d;
-}
-
-.nav-host-menu .dropdown-item:hover,
-.nav-host-menu .dropdown-item:focus {
-  color: #1f2937;
-  background-color: #f3f4f6;
-}
-
-.nav-host-menu .nav-host-item {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  max-width: 100%;
-}
-
-.nav-host-menu .nav-host-item-label {
-  flex: 1 1 auto;
+/* Let the host URL truncate down to the space the navbar actually has left; flex items
+   only shrink past their content width once the automatic minimum size is lifted. */
+.navbar-actions,
+.navbar-actions .dropdown {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.nav-host-menu .nav-host-item-check {
-  flex: 0 0 auto;
-  color: #1f2937;
-  font-size: 0.75rem;
-}
-
-.nav-host-menu .nav-host-item.active {
-  color: #1f2937;
-  font-weight: 600;
+.host-menu {
+  max-width: min(90vw, 32rem);
 }

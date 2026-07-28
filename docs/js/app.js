@@ -11,6 +11,7 @@ import {
   takeLegacyCredentials,
 } from "./config.js";
 import { listDirectory, openFile } from "./webdav.js";
+import { applyTheme, resolveTheme, storeTheme } from "./theme.js";
 import { buildCrumbs, formatMtime, formatSize } from "./ui.js";
 
 Alpine.plugin(persist);
@@ -30,6 +31,9 @@ Alpine.data("app", () => ({
   hosts: Alpine.$persist([]).as("webdav-index:hosts"),
   /** `{ [baseUrl]: { username, password } }` */
   credentials: Alpine.$persist({}).as("webdav-index:creds"),
+
+  /** Bootstrap color mode; the inline snippet in index.html already applied it to `<html>`. */
+  theme: resolveTheme(),
 
   form: { url: "", username: "", password: "" },
   connecting: false,
@@ -75,6 +79,13 @@ Alpine.data("app", () => ({
 
   get crumbs() {
     return buildCrumbs(this.path, (path) => buildAppSearch({ path }));
+  },
+
+  /** Flipping it makes the choice explicit; until then the OS preference is followed. */
+  toggleTheme() {
+    this.theme = this.theme === "dark" ? "light" : "dark";
+    applyTheme(this.theme);
+    storeTheme(this.theme);
   },
 
   /**

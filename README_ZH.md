@@ -12,6 +12,7 @@ WebDAV-Index 当前支持以下特性：
 - **HTTP 基本认证**：支持 HTTP Basic 认证，账号密码保存在本机浏览器的 `localStorage`
 - **多 Host 切换**：可登录多个 WebDAV，凭证持久保存在本机，通过右上角下拉菜单切换
 - **移动设备友好**：支持响应式布局，列表内容在窄屏下可横滑，触控区域友好
+- **明暗主题**：默认跟随操作系统的深色偏好，也可在右上角手动切换，选择保存在本机浏览器
 
 ## 快速开始
 
@@ -20,7 +21,7 @@ WebDAV-Index 当前支持以下特性：
 浏览器打开：
 
 ```text
-https://fantasticmao.github.io/webdav-index/?url=https://dav.example.com/files/
+https://fantasticmao.github.io/webdav-index/?url=https://webdav.example.com/files/
 ```
 
 | 参数   | 说明                                    |
@@ -63,11 +64,12 @@ location /files/ {
 
 1. **列目录**：由 [webdav](https://github.com/perry-mitchell/webdav-client) 客户端对目标目录发送 WebDAV `PROPFIND`（`Depth: 1`，无请求体即 `allprop`），解析 `207 Multi-Status` XML，取出 `href`、`getlastmodified`、`getcontentlength`、`resourcetype/collection`。该库以浏览器 ES 模块形式从 CDN 直接加载，不引入构建步骤。
 2. **鉴权**：每个请求带 `Authorization: Basic ...`，请求头在本地生成（非 ASCII 账号密码按 UTF-8 编码），凭证以 WebDAV 根 URL 为索引存入 `localStorage` 的 `webdav-index:creds`，关闭标签页后仍可复用，Sign out 或清除站点数据后失效。同一浏览器可记住多个根 URL，并在右上角切换。
-3. **界面**：[Bootstrap](https://getbootstrap.com/) 负责样式与弹窗/下拉组件，[Alpine.js](https://alpinejs.dev/) 负责声明式渲染与状态，目录列表、面包屑、连接表单都直接由 `index.html` 中的模板驱动。
-4. **路由**：使用 query 参数 `path` 表示当前目录，配合 `pushState` / `popstate` 支持前进后退。
-5. **打开文件**：在新标签页打开资源 URL，并将用户名密码写入 URL userinfo（`https://user:pass@host/path`），以便浏览器直接渲染图片、PDF 等，无需再弹一次登录框。
-6. **CORS**：静态站与 WebDAV 通常不同源，浏览器会先发 `OPTIONS` 预检；服务端未正确回 CORS 头时，前端只能提示网络/跨域错误。
-7. **第三方依赖**：Bootstrap、Alpine.js、webdav、pretty-bytes 全部按精确版本从 jsDelivr 加载并带 `integrity` 校验，仓库里不含 `node_modules`，也不需要打包。
+3. **界面**：[Bootstrap](https://getbootstrap.com/) 负责样式与弹窗/下拉组件，[Alpine.js](https://alpinejs.dev/) 负责声明式渲染与状态，目录列表、面包屑、连接表单都直接由 `index.html` 中的模板驱动。样式尽量只使用 Bootstrap 原生组件与工具类，自定义 CSS 仅保留图标尺寸、表格列宽等无法用工具类表达的部分。
+4. **明暗主题**：使用 Bootstrap 原生的 `data-bs-theme` 色彩模式。首屏渲染前由 `index.html` 中的内联脚本读取 `localStorage` 的 `webdav-index:theme`（缺省回退到 `prefers-color-scheme`）并写入 `<html>`，因此刷新时不会闪白；手动切换后主题会持久保存。
+5. **路由**：使用 query 参数 `path` 表示当前目录，配合 `pushState` / `popstate` 支持前进后退。
+6. **打开文件**：在新标签页打开资源 URL，并将用户名密码写入 URL userinfo（`https://user:pass@host/path`），以便浏览器直接渲染图片、PDF 等，无需再弹一次登录框。
+7. **CORS**：静态站与 WebDAV 通常不同源，浏览器会先发 `OPTIONS` 预检；服务端未正确回 CORS 头时，前端只能提示网络/跨域错误。
+8. **第三方依赖**：Bootstrap、Alpine.js、webdav、pretty-bytes 全部按精确版本从 jsDelivr 加载并带 `integrity` 校验，仓库里不含 `node_modules`，也不需要打包。
 
 ## 常见问题
 
@@ -91,7 +93,7 @@ A: 新标签页通过 URL userinfo 携带凭证；部分浏览器会限制或剥
 
 Q: `path` 与 WebDAV 上的真实路径是什么关系？
 
-A: `path` 是相对于 `url` 所指向根目录的路径。例如 `url=https://dav.example.com/files/` 且 `path=/a/b/`，实际请求的是 `https://dav.example.com/files/a/b/`。
+A: `path` 是相对于 `url` 所指向根目录的路径。例如 `url=https://webdav.example.com/files/` 且 `path=/a/b/`，实际请求的是 `https://webdav.example.com/files/a/b/`。
 
 ---
 
