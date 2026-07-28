@@ -109,6 +109,10 @@ Alpine.data("app", () => ({
     return this.hosts.filter((host) => this.credentialsFor(host));
   },
 
+  get sortedHosts() {
+    return [...this.hosts].sort((a, b) => a.localeCompare(b));
+  },
+
   /**
    * `type="url"` accepts any scheme, so the http(s)-only constraint is reported through
    * the Constraint Validation API and rendered by the form's `.invalid-feedback`.
@@ -133,12 +137,13 @@ Alpine.data("app", () => ({
 
     if (!fromQuery && !this.baseUrl && !prefillUrl) {
       this.connectHint =
-        "Enter the WebDAV URL and credentials. After connecting, the URL is saved in the address bar for refresh or sharing.";
+        "Enter the WebDAV URL and credentials. After connecting, the URL is saved in the address bar for refresh or sharing. Leave username and password empty if the server needs no authentication.";
     } else if (cancellable) {
-      this.connectHint = "Enter another WebDAV URL and credentials to connect.";
+      this.connectHint =
+        "Enter another WebDAV URL and credentials to connect. Leave username and password empty if the server needs no authentication.";
     } else {
       this.connectHint =
-        "Enter your credentials to browse. You can change the WebDAV URL if needed.";
+        "Enter your credentials to browse, or leave them empty if the server needs no authentication. You can change the WebDAV URL if needed.";
     }
 
     this.modal.show();

@@ -16,7 +16,6 @@
     integrity="sha384-jA0ZEVHvzHglub9HHaD1lcLnJSfXbHmF3ob0icTH8T6WxiRuLV94rQWuA1/Arn8k" crossorigin="anonymous">
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/pretty-bytes@7.1.1/index.js"
     integrity="sha384-kf7icmuinvJkHQyk9s6thyk5sg/byAieoxTfSaZL1uvmG1M4+sNNSnGcKmf5Ohl7" crossorigin="anonymous">
-  <!-- Applies the color mode before the first paint; js/theme.js owns the storage key. -->
   <script>
     (() => {
       const stored = localStorage.getItem("webdav-index:theme");
@@ -35,10 +34,6 @@
     <symbol id="icon-file" viewBox="0 0 16 16">
       <path
         d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z" />
-    </symbol>
-    <symbol id="icon-check" viewBox="0 0 16 16">
-      <path
-        d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z" />
     </symbol>
     <symbol id="icon-sun" viewBox="0 0 16 16">
       <path
@@ -63,15 +58,10 @@
             <span x-text="baseUrl"></span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end host-menu" aria-labelledby="nav-host-btn">
-            <template x-for="host in hosts" :key="host">
+            <template x-for="host in sortedHosts" :key="host">
               <li>
-                <button type="button" class="dropdown-item d-flex align-items-center gap-2"
-                  :class="{ active: host === baseUrl }" :title="host" @click="switchHost(host)">
-                  <span class="text-truncate" x-text="host"></span>
-                  <svg class="app-icon ms-auto" aria-hidden="true" x-show="host === baseUrl">
-                    <use href="#icon-check" />
-                  </svg>
-                </button>
+                <button type="button" class="dropdown-item text-truncate" :class="{ active: host === baseUrl }"
+                  :title="host" @click="switchHost(host)" x-text="host"></button>
               </li>
             </template>
             <li>
@@ -185,16 +175,14 @@
               <div class="invalid-feedback">Please enter a valid http(s) URL</div>
             </div>
             <div class="mb-3">
-              <label for="input-username" class="form-label">Username</label>
-              <input type="text" class="form-control" id="input-username" name="username" required
-                autocomplete="username" x-ref="inputUsername" x-model="form.username">
-              <div class="invalid-feedback">Please enter a username</div>
+              <label for="input-username" class="form-label">Username (optional)</label>
+              <input type="text" class="form-control" id="input-username" name="username" autocomplete="username"
+                x-ref="inputUsername" x-model="form.username">
             </div>
             <div class="mb-0">
-              <label for="input-password" class="form-label">Password</label>
-              <input type="password" class="form-control" id="input-password" name="password" required
+              <label for="input-password" class="form-label">Password (optional)</label>
+              <input type="password" class="form-control" id="input-password" name="password"
                 autocomplete="current-password" x-model="form.password">
-              <div class="invalid-feedback">Please enter a password</div>
             </div>
             <div class="alert alert-danger mt-3 mb-0" role="alert" x-show="connectError" x-cloak x-text="connectError">
             </div>

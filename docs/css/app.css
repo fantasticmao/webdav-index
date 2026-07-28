@@ -28,4 +28,5 @@
 
 .host-menu {
   max-width: min(90vw, 32rem);
+  --bs-dropdown-font-size: 0.875rem;
 }

@@ -1,5 +1,16 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/webdav@5.10.0/dist/web/index.js";
 
+function normalizeCredentials(credentials) {
+  return {
+    username: credentials?.username || "",
+    password: credentials?.password || "",
+  };
+}
+
+function isAnonymous({ username, password }) {
+  return username === "" && password === "";
+}
+
 /**
  * The client's own Basic auth support base64-encodes as Latin1 and throws on non-ASCII
  * credentials, so the header is built here and passed through as a custom header instead.
@@ -22,21 +33,24 @@ export function basicAuthHeader(username, password) {
 
 let cachedClient = null;
 
+/**
+ * Anonymous access sends no `Authorization` at all: an empty Basic token would still make
+ * the preflight ask for the header, which servers that only allow `Depth` would reject.
+ */
 function getClient(baseUrl, credentials) {
   const key = `${baseUrl}\u0000${credentials.username}\u0000${credentials.password}`;
   if (!cachedClient || cachedClient.key !== key) {
-    cachedClient = {
-      key,
-      client: createClient(baseUrl, {
-        headers: { Authorization: basicAuthHeader(credentials.username, credentials.password) },
-      }),
-    };
+    const options = isAnonymous(credentials)
+      ? {}
+      : { headers: { Authorization: basicAuthHeader(credentials.username, credentials.password) } };
+    cachedClient = { key, client: createClient(baseUrl, options) };
   }
   return cachedClient.client;
 }
 
 export async function listDirectory(baseUrl, relativePath, credentials) {
-  const client = getClient(baseUrl, credentials);
+  const creds = normalizeCredentials(credentials);
+  const client = getClient(baseUrl, creds);
   const currentPath = relativePath || "/";
 
   let result;
@@ -45,7 +59,7 @@ export async function listDirectory(baseUrl, relativePath, credentials) {
     // server that omits `getcontentlength` (both surface as `size: 0`).
     result = await client.getDirectoryContents(currentPath, { details: true });
   } catch (err) {
-    throw toAppError(err);
+    throw toAppError(err, isAnonymous(creds));
   }
 
   return result.data
@@ -93,11 +107,15 @@ function compareEntries(a, b) {
  * throws `Error` with `status` for HTTP failures, and lets `fetch` rejections
  * (network / CORS) through as `TypeError`.
  */
-function toAppError(err) {
+function toAppError(err, anonymous) {
   const status = err?.status;
 
   if (status === 401 || status === 403) {
-    const error = new Error("Authentication failed. Please check your username and password.");
+    const error = new Error(
+      anonymous
+        ? "This WebDAV server requires authentication. Please enter a username and password."
+        : "Authentication failed. Please check your username and password.",
+    );
     error.code = "AUTH";
     error.status = status;
     error.cause = err;
@@ -132,10 +150,13 @@ function toAppError(err) {
  * browser can render images / PDFs without prompting again.
  */
 export function openFile(baseUrl, relativePath, credentials) {
-  const client = getClient(baseUrl, credentials);
+  const creds = normalizeCredentials(credentials);
+  const client = getClient(baseUrl, creds);
   const url = new URL(client.getFileDownloadLink(relativePath));
-  // The URL setters percent-encode, unlike the client's own userinfo injection.
-  url.username = credentials.username;
-  url.password = credentials.password;
+  if (!isAnonymous(creds)) {
+    // The URL setters percent-encode, unlike the client's own userinfo injection.
+    url.username = creds.username;
+    url.password = creds.password;
+  }
   window.open(url.href, "_blank", "noopener,noreferrer");
 }
