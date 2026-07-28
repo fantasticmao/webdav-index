@@ -103,14 +103,14 @@ body {
 }
 
 .nav-host-btn {
-  max-width: min(60vw, 20rem);
+  max-width: min(70vw, 36rem);
   padding: 0.15rem 0.25rem;
   font-size: 0.8125rem;
   line-height: 1.25;
 }
 
 .nav-host-menu {
-  --bs-dropdown-min-width: 0;
+  --bs-dropdown-min-width: 12rem;
   --bs-dropdown-font-size: 0.8125rem;
   --bs-dropdown-padding-y: 0.2rem;
   --bs-dropdown-spacer: 0.15rem;
@@ -118,8 +118,7 @@ body {
   --bs-dropdown-border-color: var(--app-border);
   --bs-dropdown-item-padding-x: 0.5rem;
   --bs-dropdown-item-padding-y: 0.2rem;
-  min-width: auto;
-  width: max-content;
+  max-width: min(90vw, 36rem);
 }
 
 .nav-host-menu .dropdown-item {
@@ -130,4 +129,30 @@ body {
 .nav-host-menu .dropdown-item:focus {
   color: #1f2937;
   background-color: #f3f4f6;
+}
+
+.nav-host-menu .nav-host-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.nav-host-menu .nav-host-item-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-host-menu .nav-host-item-check {
+  flex: 0 0 auto;
+  color: #1f2937;
+  font-size: 0.75rem;
+}
+
+.nav-host-menu .nav-host-item.active {
+  color: #1f2937;
+  font-weight: 600;
 }

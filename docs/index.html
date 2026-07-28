@@ -20,7 +20,13 @@
           id="nav-host-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Server menu">
           <span id="nav-host"></span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end nav-host-menu" aria-labelledby="nav-host-btn">
+        <ul class="dropdown-menu dropdown-menu-end nav-host-menu" aria-labelledby="nav-host-btn" id="nav-host-menu">
+          <li>
+            <hr class="dropdown-divider my-1" id="nav-host-divider">
+          </li>
+          <li>
+            <button type="button" class="dropdown-item" id="btn-connect-another">Connect another…</button>
+          </li>
           <li>
             <button type="button" class="dropdown-item" id="btn-signout">Sign out</button>
           </li>
@@ -86,6 +92,7 @@
             <div class="alert alert-danger mt-3 mb-0 d-none" id="connect-error" role="alert"></div>
           </div>
           <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary d-none" id="btn-connect-cancel">Cancel</button>
             <button type="submit" class="btn btn-primary" id="btn-connect">
               <span class="spinner-border spinner-border-sm me-1 d-none" id="connect-spinner" aria-hidden="true"></span>
               Connect

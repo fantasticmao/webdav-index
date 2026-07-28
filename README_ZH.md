@@ -9,7 +9,8 @@ WebDAV-Index 当前支持以下特性：
 - **纯静态页面**：本项目没有后端，所有请求均在浏览器本地完成
 - **文件只读浏览**：列目录、面包屑导航、进入子目录；点击文件在新标签页打开预览
 - **URL 参数驱动**：`url` 指定 WebDAV 根地址，`path` 指定文件目录地址，便于分享与刷新
-- **HTTP 基本认证**：支持 HTTP Basic 认证，账号密码仅保存在当前标签页的 `sessionStorage`
+- **HTTP 基本认证**：支持 HTTP Basic 认证，账号密码保存在本机浏览器的 `localStorage`
+- **多 Host 切换**：可登录多个 WebDAV，凭证持久保存在本机，通过右上角下拉菜单切换
 - **移动设备友好**：支持响应式布局，列表内容在窄屏下可横滑，触控区域友好
 
 ## 快速开始
@@ -61,7 +62,7 @@ location /files/ {
 ## 实现原理
 
 1. **列目录**：对目标目录发送 WebDAV `PROPFIND`（`Depth: 1`），解析 `207 Multi-Status` XML，取出 `href`、`displayname`、`getlastmodified`、`getcontentlength`、`resourcetype/collection`。
-2. **鉴权**：每个请求带 `Authorization: Basic ...`；凭证按 WebDAV 根 URL 存入 `sessionStorage`，关闭标签页即失效。
+2. **鉴权**：每个请求带 `Authorization: Basic ...`；凭证按 WebDAV 根 URL 存入 `localStorage`，关闭标签页后仍可复用，Sign out 或清除站点数据后失效。同一浏览器可记住多个根 URL，并在右上角切换。
 3. **路由**：使用 query 参数 `path` 表示当前目录，配合 `pushState` / `popstate` 支持前进后退。
 4. **打开文件**：在新标签页打开资源 URL，并将用户名密码写入 URL userinfo（`https://user:pass@host/path`），以便浏览器直接渲染图片、PDF 等，无需再弹一次登录框。
 5. **CORS**：静态站与 WebDAV 通常不同源，浏览器会先发 `OPTIONS` 预检；服务端未正确回 CORS 头时，前端只能提示网络/跨域错误。
@@ -94,7 +95,7 @@ A: `path` 是相对于 `url` 所指向根目录的路径。例如 `url=https://d
 
 Q: 账号密码会泄漏吗？
 
-A: 不会。密码只存在你本机浏览器的 `sessionStorage`，并随请求发往你配置的 WebDAV 服务器。
+A: 不会主动外泄。密码只存在你本机浏览器的 `localStorage`，并随请求发往你配置的 WebDAV 服务器。同一设备上的其他网页脚本无法跨域读取；清除站点数据或 Sign out 后会删除。
 
 ---
 

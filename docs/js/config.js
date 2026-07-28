@@ -1,9 +1,10 @@
 /**
  * Read / write `url` & `path` from query string;
- * Basic credentials in sessionStorage.
+ * Basic credentials and known hosts in localStorage.
  */
 
 const CREDENTIALS_PREFIX = "webdav-index:creds:";
+const HOSTS_KEY = "webdav-index:hosts";
 const URL_PARAM = "url";
 const PATH_PARAM = "path";
 
@@ -92,13 +93,75 @@ export function setWebdavBaseUrlInQuery(baseUrl) {
 }
 
 /**
+ * Switch active host in the query string and reset path to `/`.
+ * @param {string} baseUrl
+ */
+export function setActiveHostInQuery(baseUrl) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (!normalized) return;
+  window.history.replaceState(
+    null,
+    "",
+    buildAppSearch({ webdavBaseUrl: normalized, path: "/" }),
+  );
+}
+
+/**
+ * @returns {string[]} Normalized base URLs, most recently used first
+ */
+export function getKnownHosts() {
+  try {
+    const raw = localStorage.getItem(HOSTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    /** @type {string[]} */
+    const hosts = [];
+    for (const item of parsed) {
+      const normalized = normalizeBaseUrl(item);
+      if (normalized && !hosts.includes(normalized)) hosts.push(normalized);
+    }
+    return hosts;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Remember a host (move to front of the known list).
+ * @param {string} baseUrl
+ */
+export function rememberHost(baseUrl) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (!normalized) return;
+  const hosts = getKnownHosts().filter((h) => h !== normalized);
+  hosts.unshift(normalized);
+  localStorage.setItem(HOSTS_KEY, JSON.stringify(hosts));
+}
+
+/**
+ * Remove a host from the known list.
+ * @param {string} baseUrl
+ */
+export function forgetHost(baseUrl) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (!normalized) return;
+  const hosts = getKnownHosts().filter((h) => h !== normalized);
+  if (hosts.length === 0) {
+    localStorage.removeItem(HOSTS_KEY);
+  } else {
+    localStorage.setItem(HOSTS_KEY, JSON.stringify(hosts));
+  }
+}
+
+/**
  * @param {string} baseUrl
  * @returns {{ username: string, password: string } | null}
  */
 export function getCredentials(baseUrl) {
   const key = CREDENTIALS_PREFIX + baseUrl;
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.username !== "string" || typeof parsed.password !== "string") {
@@ -117,14 +180,14 @@ export function getCredentials(baseUrl) {
  */
 export function setCredentials(baseUrl, username, password) {
   const key = CREDENTIALS_PREFIX + baseUrl;
-  sessionStorage.setItem(key, JSON.stringify({ username, password }));
+  localStorage.setItem(key, JSON.stringify({ username, password }));
 }
 
 /**
  * @param {string} baseUrl
  */
 export function clearCredentials(baseUrl) {
-  sessionStorage.removeItem(CREDENTIALS_PREFIX + baseUrl);
+  localStorage.removeItem(CREDENTIALS_PREFIX + baseUrl);
 }
 
 /**
