@@ -1,380 +1,298 @@
+import Alpine from "https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/module.esm.min.js";
+import persist from "https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.15.12/dist/module.esm.min.js";
 import {
   getWebdavBaseUrl,
   normalizeBaseUrl,
   setWebdavBaseUrlInQuery,
   setActiveHostInQuery,
-  getCredentials,
-  setCredentials,
-  clearCredentials,
-  getKnownHosts,
-  rememberHost,
-  forgetHost,
   getPath,
   setPath,
   buildAppSearch,
+  takeLegacyCredentials,
 } from "./config.js";
 import { listDirectory, openFile } from "./webdav.js";
-import { renderBreadcrumb, renderListing, showStatus, hideListing, hideBreadcrumb } from "./ui.js";
+import { buildCrumbs, formatMtime, formatSize } from "./ui.js";
 
-const connectModalEl = document.getElementById("connect-modal");
-const connectForm = document.getElementById("connect-form");
-const inputUrl = document.getElementById("input-webdav-url");
-const inputUser = document.getElementById("input-username");
-const inputPass = document.getElementById("input-password");
-const connectError = document.getElementById("connect-error");
-const connectSpinner = document.getElementById("connect-spinner");
-const btnConnect = document.getElementById("btn-connect");
-const btnConnectCancel = document.getElementById("btn-connect-cancel");
-const btnConnectAnother = document.getElementById("btn-connect-another");
-const btnSignout = document.getElementById("btn-signout");
-const navSession = document.getElementById("nav-session");
-const navHost = document.getElementById("nav-host");
-const navHostMenu = document.getElementById("nav-host-menu");
-const navHostDivider = document.getElementById("nav-host-divider");
+Alpine.plugin(persist);
 
-const connectModal = new window.bootstrap.Modal(connectModalEl);
+Alpine.data("app", () => ({
+  /** Active WebDAV base URL, or null when there is no session. */
+  baseUrl: null,
+  path: "/",
+  /** @type {import('./webdav.js').WebDavEntry[]} */
+  entries: [],
+  loading: false,
+  errorMessage: "",
+  /** Incremented per load so a superseded request cannot clobber newer state. */
+  loadToken: 0,
 
-/** @type {string|null} */
-let activeBaseUrl = null;
+  /** Known hosts, most recently used first. Same storage key and JSON shape as before. */
+  hosts: Alpine.$persist([]).as("webdav-index:hosts"),
+  /** `{ [baseUrl]: { username, password } }` */
+  credentials: Alpine.$persist({}).as("webdav-index:creds"),
 
-/** Whether the connect modal may be cancelled (Connect another flow). */
-let connectCancellable = false;
+  form: { url: "", username: "", password: "" },
+  connecting: false,
+  connectError: "",
+  connectHint: "",
+  connectCancellable: false,
+  showValidation: false,
+  /** @type {any} Bootstrap Modal instance */
+  modal: null,
 
-/**
- * Display label for a WebDAV base URL (full URL).
- * @param {string} baseUrl
- * @returns {string}
- */
-function formatHostLabel(baseUrl) {
-  return baseUrl;
-}
+  formatMtime,
+  formatSize,
 
-/**
- * @param {boolean} cancellable
- */
-function setConnectModalDismissible(cancellable) {
-  connectCancellable = cancellable;
-  btnConnectCancel.classList.toggle("d-none", !cancellable);
-}
+  init() {
+    Object.assign(this.credentials, takeLegacyCredentials());
+    this.hosts = this.hosts
+      .map((host) => normalizeBaseUrl(host))
+      .filter((host, i, all) => host && all.indexOf(host) === i);
 
-/**
- * @param {string|null} baseUrl
- */
-function updateNavSession(baseUrl) {
-  if (!baseUrl) {
-    navSession.classList.add("d-none");
-    navHost.textContent = "";
-    renderHostList(null);
-    return;
-  }
-  navHost.textContent = formatHostLabel(baseUrl);
-  navSession.classList.remove("d-none");
-  renderHostList(baseUrl);
-}
-
-/**
- * Render known hosts above the divider in the nav dropdown.
- * @param {string|null} activeUrl
- */
-function renderHostList(activeUrl) {
-  navHostMenu.querySelectorAll("[data-host-item]").forEach((el) => el.remove());
-
-  const hosts = getKnownHosts();
-  const dividerLi = navHostDivider.parentElement;
-  if (!dividerLi) return;
-
-  for (const host of hosts) {
-    const li = document.createElement("li");
-    li.setAttribute("data-host-item", "");
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "dropdown-item nav-host-item";
-    btn.title = host;
-    btn.dataset.hostUrl = host;
-
-    const isActive = host === activeUrl;
-    if (isActive) btn.classList.add("active");
-
-    const label = document.createElement("span");
-    label.className = "nav-host-item-label";
-    label.textContent = formatHostLabel(host);
-    btn.appendChild(label);
-
-    if (isActive) {
-      const check = document.createElement("i");
-      check.className = "bi bi-check-lg nav-host-item-check";
-      check.setAttribute("aria-hidden", "true");
-      btn.appendChild(check);
-    }
-
-    btn.addEventListener("click", () => {
-      if (host === activeBaseUrl) return;
-      switchHost(host);
+    window.addEventListener("popstate", () => {
+      if (this.baseUrl) this.load();
     });
 
-    li.appendChild(btn);
-    navHostMenu.insertBefore(li, dividerLi);
-  }
-}
+    // `init()` runs before Alpine walks the children, so `$refs` is only complete on the
+    // next tick.
+    this.$nextTick(() => {
+      this.modal = new window.bootstrap.Modal(this.$refs.connectModal);
+      // `hide.bs.modal` contains dots, which Alpine would parse as event modifiers.
+      this.$refs.connectModal.addEventListener("hide.bs.modal", (event) => {
+        if (!this.connectCancellable && !this.baseUrl) event.preventDefault();
+      });
 
-function showConnectError(msg) {
-  if (!msg) {
-    connectError.classList.add("d-none");
-    connectError.textContent = "";
-    return;
-  }
-  connectError.textContent = msg;
-  connectError.classList.remove("d-none");
-}
-
-function setConnecting(busy) {
-  btnConnect.disabled = busy;
-  connectSpinner.classList.toggle("d-none", !busy);
-  btnConnectCancel.disabled = busy;
-}
-
-/**
- * @param {{ requireCredentials?: boolean, prefillUrl?: string|null, cancellable?: boolean }} [opts]
- */
-function openConnectModal(opts = {}) {
-  const { requireCredentials = true, prefillUrl = null, cancellable = false } = opts;
-  const fromQuery = getWebdavBaseUrl();
-
-  setConnectModalDismissible(cancellable);
-
-  if (prefillUrl !== null) {
-    inputUrl.value = prefillUrl || "";
-  } else {
-    inputUrl.value = fromQuery || activeBaseUrl || "";
-  }
-  inputUser.value = "";
-  inputPass.value = "";
-  showConnectError("");
-  connectForm.classList.remove("was-validated");
-
-  if (!fromQuery && !activeBaseUrl && !prefillUrl) {
-    document.getElementById("connect-hint").textContent =
-      "Enter the WebDAV URL and credentials. After connecting, the URL is saved in the address bar for refresh or sharing.";
-  } else if (cancellable) {
-    document.getElementById("connect-hint").textContent =
-      "Enter another WebDAV URL and credentials to connect.";
-  } else {
-    document.getElementById("connect-hint").textContent =
-      "Enter your credentials to browse. You can change the WebDAV URL if needed.";
-  }
-
-  if (!requireCredentials && fromQuery) {
-    const creds = getCredentials(fromQuery);
-    if (creds) {
-      activeBaseUrl = fromQuery;
-      rememberHost(fromQuery);
-      loadCurrentDirectory();
-      return;
-    }
-  }
-
-  connectModal.show();
-  queueMicrotask(() => {
-    if (!inputUrl.value) inputUrl.focus();
-    else inputUser.focus();
-  });
-}
-
-/**
- * Switch to another known host; reset path to `/`.
- * @param {string} baseUrl
- */
-function switchHost(baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl);
-  if (!normalized) return;
-
-  setActiveHostInQuery(normalized);
-  const creds = getCredentials(normalized);
-  if (creds) {
-    activeBaseUrl = normalized;
-    rememberHost(normalized);
-    updateNavSession(normalized);
-    loadCurrentDirectory();
-    return;
-  }
-
-  openConnectModal({
-    requireCredentials: true,
-    prefillUrl: normalized,
-    cancellable: !!activeBaseUrl,
-  });
-}
-
-connectForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  showConnectError("");
-
-  const normalized = normalizeBaseUrl(inputUrl.value);
-  if (!normalized) {
-    inputUrl.classList.add("is-invalid");
-    connectForm.classList.add("was-validated");
-    return;
-  }
-  inputUrl.classList.remove("is-invalid");
-
-  const username = inputUser.value;
-  const password = inputPass.value;
-  if (!username || !password) {
-    connectForm.classList.add("was-validated");
-    return;
-  }
-
-  const switchingHost = !activeBaseUrl || activeBaseUrl !== normalized;
-  const browsePath = switchingHost ? "/" : getPath();
-
-  setConnecting(true);
-  try {
-    await listDirectory(normalized, browsePath, { username, password });
-    if (switchingHost) {
-      setActiveHostInQuery(normalized);
-    } else {
-      setWebdavBaseUrlInQuery(normalized);
-    }
-    setCredentials(normalized, username, password);
-    rememberHost(normalized);
-    activeBaseUrl = normalized;
-    updateNavSession(normalized);
-    setConnectModalDismissible(false);
-    connectModal.hide();
-    loadCurrentDirectory();
-  } catch (err) {
-    if (err.code === "AUTH") {
-      showConnectError(err.message);
-    } else if (err.code === "NETWORK") {
-      showConnectError(err.message);
-    } else {
-      showConnectError(err.message || "Connection failed");
-    }
-  } finally {
-    setConnecting(false);
-  }
-});
-
-btnConnectCancel.addEventListener("click", () => {
-  connectModal.hide();
-});
-
-connectModalEl.addEventListener("hide.bs.modal", (e) => {
-  if (!connectCancellable && activeBaseUrl === null) {
-    e.preventDefault();
-  }
-});
-
-connectModalEl.addEventListener("hidden.bs.modal", () => {
-  setConnectModalDismissible(false);
-});
-
-btnConnectAnother.addEventListener("click", () => {
-  openConnectModal({
-    requireCredentials: true,
-    prefillUrl: "",
-    cancellable: true,
-  });
-});
-
-btnSignout.addEventListener("click", () => {
-  const base = activeBaseUrl || getWebdavBaseUrl();
-  if (base) {
-    clearCredentials(base);
-    forgetHost(base);
-  }
-
-  const remaining = getKnownHosts().filter((h) => getCredentials(h));
-  if (remaining.length > 0) {
-    activeBaseUrl = null;
-    switchHost(remaining[0]);
-    return;
-  }
-
-  activeBaseUrl = null;
-  updateNavSession(null);
-  hideListing();
-  hideBreadcrumb();
-  showStatus("hidden");
-  openConnectModal({ requireCredentials: true, cancellable: false });
-});
-
-function onPathChange() {
-  if (!activeBaseUrl) return;
-  const creds = getCredentials(activeBaseUrl);
-  if (!creds) {
-    openConnectModal({ requireCredentials: true });
-    return;
-  }
-  loadCurrentDirectory();
-}
-
-window.addEventListener("popstate", onPathChange);
-window.addEventListener("app:pathchange", onPathChange);
-
-async function loadCurrentDirectory() {
-  const base = activeBaseUrl || getWebdavBaseUrl();
-  if (!base) {
-    openConnectModal({ requireCredentials: true });
-    return;
-  }
-  activeBaseUrl = base;
-  const creds = getCredentials(base);
-  if (!creds) {
-    updateNavSession(null);
-    openConnectModal({ requireCredentials: true });
-    return;
-  }
-  rememberHost(base);
-  updateNavSession(base);
-
-  const path = getPath();
-  hideListing();
-  showStatus("loading", "Loading directory…");
-  renderBreadcrumb(path, (p) => setPath(p), buildAppSearch);
-
-  try {
-    const entries = await listDirectory(base, path, creds);
-    showStatus("hidden");
-    renderListing(entries, {
-      onOpenDir: (p) => setPath(p),
-      onOpenFile: (p) => openFile(base, p, creds),
-    });
-  } catch (err) {
-    hideListing();
-    if (err.code === "AUTH") {
-      clearCredentials(base);
-      forgetHost(base);
-      const remaining = getKnownHosts().filter((h) => getCredentials(h));
-      if (remaining.length > 0) {
-        activeBaseUrl = null;
-        showStatus("hidden");
-        switchHost(remaining[0]);
+      const base = getWebdavBaseUrl();
+      if (base && this.credentialsFor(base)) {
+        this.baseUrl = base;
+        this.rememberHost(base);
+        this.load();
         return;
       }
-      activeBaseUrl = null;
-      updateNavSession(null);
-      showStatus("hidden");
-      openConnectModal({ requireCredentials: true });
-      showConnectError(err.message);
-      return;
-    }
-    showStatus("error", err.message || "Failed to load");
-  }
-}
+      this.openConnect();
+    });
+  },
 
-(function init() {
-  const base = getWebdavBaseUrl();
-  if (base) {
-    const creds = getCredentials(base);
-    if (creds) {
-      activeBaseUrl = base;
-      rememberHost(base);
-      updateNavSession(base);
-      loadCurrentDirectory();
+  get crumbs() {
+    return buildCrumbs(this.path, (path) => buildAppSearch({ path }));
+  },
+
+  /**
+   * @param {string|null} baseUrl
+   * @returns {{ username: string, password: string }|null}
+   */
+  credentialsFor(baseUrl) {
+    const entry = baseUrl ? this.credentials[baseUrl] : null;
+    if (!entry || typeof entry.username !== "string" || typeof entry.password !== "string") {
+      return null;
+    }
+    return { username: entry.username, password: entry.password };
+  },
+
+  /** @param {string} baseUrl */
+  rememberHost(baseUrl) {
+    if (this.hosts[0] === baseUrl) return;
+    this.hosts = [baseUrl, ...this.hosts.filter((host) => host !== baseUrl)];
+  },
+
+  /**
+   * Drop a host along with its saved credentials.
+   * @param {string} baseUrl
+   */
+  forgetHost(baseUrl) {
+    this.hosts = this.hosts.filter((host) => host !== baseUrl);
+    delete this.credentials[baseUrl];
+  },
+
+  /** Hosts we could switch to without asking for credentials again. */
+  get signedInHosts() {
+    return this.hosts.filter((host) => this.credentialsFor(host));
+  },
+
+  /**
+   * `type="url"` accepts any scheme, so the http(s)-only constraint is reported through
+   * the Constraint Validation API and rendered by the form's `.invalid-feedback`.
+   */
+  syncUrlValidity() {
+    this.$refs.inputUrl.setCustomValidity(
+      normalizeBaseUrl(this.form.url) ? "" : "Please enter a valid http(s) URL",
+    );
+  },
+
+  /**
+   * @param {{ prefillUrl?: string|null, cancellable?: boolean }} [options]
+   */
+  openConnect(options = {}) {
+    const { prefillUrl = null, cancellable = false } = options;
+    const fromQuery = getWebdavBaseUrl();
+
+    this.connectCancellable = cancellable;
+    this.form.url = prefillUrl !== null ? prefillUrl : fromQuery || this.baseUrl || "";
+    this.form.username = "";
+    this.form.password = "";
+    this.connectError = "";
+    this.showValidation = false;
+    this.$refs.inputUrl.setCustomValidity("");
+
+    if (!fromQuery && !this.baseUrl && !prefillUrl) {
+      this.connectHint =
+        "Enter the WebDAV URL and credentials. After connecting, the URL is saved in the address bar for refresh or sharing.";
+    } else if (cancellable) {
+      this.connectHint = "Enter another WebDAV URL and credentials to connect.";
+    } else {
+      this.connectHint =
+        "Enter your credentials to browse. You can change the WebDAV URL if needed.";
+    }
+
+    this.modal.show();
+    queueMicrotask(() => {
+      (this.form.url ? this.$refs.inputUsername : this.$refs.inputUrl).focus();
+    });
+  },
+
+  openConnectAnother() {
+    this.openConnect({ prefillUrl: "", cancellable: true });
+  },
+
+  async connect() {
+    this.connectError = "";
+    this.syncUrlValidity();
+    if (!this.$refs.connectForm.checkValidity()) {
+      this.showValidation = true;
       return;
     }
-  }
-  openConnectModal({ requireCredentials: true });
-})();
+
+    const baseUrl = normalizeBaseUrl(this.form.url);
+    const credentials = { username: this.form.username, password: this.form.password };
+    const switchingHost = this.baseUrl !== baseUrl;
+
+    this.connecting = true;
+    try {
+      // Probe before persisting anything, so bad credentials never get saved.
+      await listDirectory(baseUrl, switchingHost ? "/" : this.path, credentials);
+
+      if (switchingHost) {
+        setActiveHostInQuery(baseUrl);
+      } else {
+        setWebdavBaseUrlInQuery(baseUrl);
+      }
+      this.credentials[baseUrl] = credentials;
+      this.rememberHost(baseUrl);
+      this.baseUrl = baseUrl;
+      this.connectCancellable = false;
+      this.modal.hide();
+      this.load();
+    } catch (err) {
+      this.connectError = err.message || "Connection failed";
+    } finally {
+      this.connecting = false;
+    }
+  },
+
+  /**
+   * Switch to another known host; resets the path to `/`.
+   * @param {string} host
+   */
+  switchHost(host) {
+    const baseUrl = normalizeBaseUrl(host);
+    if (!baseUrl || baseUrl === this.baseUrl) return;
+
+    setActiveHostInQuery(baseUrl);
+    if (this.credentialsFor(baseUrl)) {
+      this.baseUrl = baseUrl;
+      this.rememberHost(baseUrl);
+      this.load();
+      return;
+    }
+    this.openConnect({ prefillUrl: baseUrl, cancellable: !!this.baseUrl });
+  },
+
+  signOut() {
+    const baseUrl = this.baseUrl || getWebdavBaseUrl();
+    if (baseUrl) this.forgetHost(baseUrl);
+
+    const remaining = this.signedInHosts;
+    this.baseUrl = null;
+    this.entries = [];
+    this.errorMessage = "";
+
+    if (remaining.length > 0) {
+      this.switchHost(remaining[0]);
+      return;
+    }
+    this.openConnect();
+  },
+
+  /** @param {string} path */
+  navigate(path) {
+    setPath(path);
+    this.load();
+  },
+
+  /** @param {import('./webdav.js').WebDavEntry} entry */
+  openEntry(entry) {
+    if (entry.isCollection) {
+      this.navigate(entry.relativePath);
+      return;
+    }
+    const credentials = this.credentialsFor(this.baseUrl);
+    if (credentials) openFile(this.baseUrl, entry.relativePath, credentials);
+  },
+
+  async load() {
+    const baseUrl = this.baseUrl || getWebdavBaseUrl();
+    const credentials = this.credentialsFor(baseUrl);
+    if (!baseUrl || !credentials) {
+      this.baseUrl = null;
+      this.openConnect();
+      return;
+    }
+
+    this.baseUrl = baseUrl;
+    this.rememberHost(baseUrl);
+    this.path = getPath();
+    this.entries = [];
+    this.errorMessage = "";
+    this.loading = true;
+    const token = ++this.loadToken;
+
+    try {
+      const entries = await listDirectory(baseUrl, this.path, credentials);
+      if (token !== this.loadToken) return;
+      this.entries = entries;
+      this.loading = false;
+    } catch (err) {
+      if (token !== this.loadToken) return;
+      if (err.code === "AUTH") {
+        // Ownership of `loading` passes to whatever this starts next.
+        this.handleAuthFailure(baseUrl, err);
+        return;
+      }
+      this.loading = false;
+      this.errorMessage = err.message || "Failed to load";
+    }
+  },
+
+  /**
+   * Stale credentials: drop them, fall back to another signed-in host if there is one.
+   * @param {string} baseUrl
+   * @param {Error} err
+   */
+  handleAuthFailure(baseUrl, err) {
+    this.forgetHost(baseUrl);
+    const remaining = this.signedInHosts;
+    this.baseUrl = null;
+    this.entries = [];
+
+    if (remaining.length > 0) {
+      // `switchHost` starts a fresh load, which manages `loading` itself.
+      this.switchHost(remaining[0]);
+      return;
+    }
+    this.loading = false;
+    this.openConnect();
+    this.connectError = err.message;
+  },
+}));
+
+Alpine.start();

@@ -10,6 +10,11 @@ body {
   min-height: 100%;
 }
 
+/* Keep Alpine-driven regions hidden until the component is initialized. */
+[x-cloak] {
+  display: none !important;
+}
+
 body {
   background: var(--app-bg);
   color: #1f2937;
@@ -18,6 +23,14 @@ body {
 .navbar-brand {
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+.app-icon {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  vertical-align: -0.125em;
+  flex: 0 0 auto;
 }
 
 .listing-table {

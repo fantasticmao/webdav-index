@@ -1,10 +1,11 @@
 /**
- * Read / write `url` & `path` from query string;
- * Basic credentials and known hosts in localStorage.
+ * Read / write `url` & `path` from the query string.
+ *
+ * Credentials and the known-host list live in Alpine `$persist` state; the only storage
+ * concern left here is migrating credentials written by earlier versions.
  */
 
-const CREDENTIALS_PREFIX = "webdav-index:creds:";
-const HOSTS_KEY = "webdav-index:hosts";
+const LEGACY_CREDENTIALS_PREFIX = "webdav-index:creds:";
 const URL_PARAM = "url";
 const PATH_PARAM = "path";
 
@@ -99,95 +100,7 @@ export function setWebdavBaseUrlInQuery(baseUrl) {
 export function setActiveHostInQuery(baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl);
   if (!normalized) return;
-  window.history.replaceState(
-    null,
-    "",
-    buildAppSearch({ webdavBaseUrl: normalized, path: "/" }),
-  );
-}
-
-/**
- * @returns {string[]} Normalized base URLs, most recently used first
- */
-export function getKnownHosts() {
-  try {
-    const raw = localStorage.getItem(HOSTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    /** @type {string[]} */
-    const hosts = [];
-    for (const item of parsed) {
-      const normalized = normalizeBaseUrl(item);
-      if (normalized && !hosts.includes(normalized)) hosts.push(normalized);
-    }
-    return hosts;
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Remember a host (move to front of the known list).
- * @param {string} baseUrl
- */
-export function rememberHost(baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl);
-  if (!normalized) return;
-  const hosts = getKnownHosts().filter((h) => h !== normalized);
-  hosts.unshift(normalized);
-  localStorage.setItem(HOSTS_KEY, JSON.stringify(hosts));
-}
-
-/**
- * Remove a host from the known list.
- * @param {string} baseUrl
- */
-export function forgetHost(baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl);
-  if (!normalized) return;
-  const hosts = getKnownHosts().filter((h) => h !== normalized);
-  if (hosts.length === 0) {
-    localStorage.removeItem(HOSTS_KEY);
-  } else {
-    localStorage.setItem(HOSTS_KEY, JSON.stringify(hosts));
-  }
-}
-
-/**
- * @param {string} baseUrl
- * @returns {{ username: string, password: string } | null}
- */
-export function getCredentials(baseUrl) {
-  const key = CREDENTIALS_PREFIX + baseUrl;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed.username !== "string" || typeof parsed.password !== "string") {
-      return null;
-    }
-    return { username: parsed.username, password: parsed.password };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * @param {string} baseUrl
- * @param {string} username
- * @param {string} password
- */
-export function setCredentials(baseUrl, username, password) {
-  const key = CREDENTIALS_PREFIX + baseUrl;
-  localStorage.setItem(key, JSON.stringify({ username, password }));
-}
-
-/**
- * @param {string} baseUrl
- */
-export function clearCredentials(baseUrl) {
-  localStorage.removeItem(CREDENTIALS_PREFIX + baseUrl);
+  window.history.replaceState(null, "", buildAppSearch({ webdavBaseUrl: normalized, path: "/" }));
 }
 
 /**
@@ -200,20 +113,50 @@ export function getPath() {
 }
 
 /**
- * Navigate to a directory path via `path` query param.
- * Uses pushState so the browser back button works; dispatches `app:pathchange`.
+ * Navigate to a directory path via `path` query param, using pushState so the browser
+ * back button works.
  * @param {string} path Directory path like `/photos/2024/`
  * @param {{ replace?: boolean }} [options]
  */
 export function setPath(path, options = {}) {
   const next = normalizePath(path);
-  const current = getPath();
   const href = buildAppSearch({ path: next });
 
-  if (options.replace || next === current) {
+  if (options.replace || next === getPath()) {
     window.history.replaceState(null, "", href);
   } else {
     window.history.pushState(null, "", href);
   }
-  window.dispatchEvent(new Event("app:pathchange"));
+}
+
+/**
+ * Fold credentials stored under the old per-URL keys (`webdav-index:creds:<url>`) into a
+ * single object and drop the old keys, so saved logins survive the storage change.
+ * @returns {Record<string, { username: string, password: string }>}
+ */
+export function takeLegacyCredentials() {
+  /** @type {Record<string, { username: string, password: string }>} */
+  const migrated = {};
+  /** Only keys whose credentials made it across are removed; nothing is dropped blindly. */
+  const movedKeys = [];
+
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith(LEGACY_CREDENTIALS_PREFIX)) continue;
+
+    const baseUrl = normalizeBaseUrl(key.slice(LEGACY_CREDENTIALS_PREFIX.length));
+    if (!baseUrl) continue;
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || "");
+      if (parsed && typeof parsed.username === "string" && typeof parsed.password === "string") {
+        migrated[baseUrl] = { username: parsed.username, password: parsed.password };
+        movedKeys.push(key);
+      }
+    } catch {
+      // unreadable entry, leave it alone
+    }
+  }
+
+  movedKeys.forEach((key) => localStorage.removeItem(key));
+  return migrated;
 }

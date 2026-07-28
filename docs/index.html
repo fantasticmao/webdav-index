@@ -5,33 +5,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WebDAV Index</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link rel="stylesheet" href="css/app.css">
-  <!-- Static `import` cannot carry `integrity`; preloading it here gets the module verified. -->
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/module.esm.min.js"
+    integrity="sha384-/ScVe6teacTo03ljvt258+VmldZx42Nik1Zk6GBVnfF6n04kCyEx7i3wsWD1g78o" crossorigin="anonymous">
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.15.12/dist/module.esm.min.js"
+    integrity="sha384-EwIc8k9laTdr6ptryRl5E2VE1Qx4psLlGqZGyrOeG4uIcOX/xjRSpNXZ1IUh1bnB" crossorigin="anonymous">
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/webdav@5.10.0/dist/web/index.js"
     integrity="sha384-jA0ZEVHvzHglub9HHaD1lcLnJSfXbHmF3ob0icTH8T6WxiRuLV94rQWuA1/Arn8k" crossorigin="anonymous">
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/pretty-bytes@7.1.1/index.js"
+    integrity="sha384-kf7icmuinvJkHQyk9s6thyk5sg/byAieoxTfSaZL1uvmG1M4+sNNSnGcKmf5Ohl7" crossorigin="anonymous">
 </head>
 
-<body>
+<body x-data="app">
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none" aria-hidden="true">
+    <symbol id="icon-folder" viewBox="0 0 16 16">
+      <path
+        d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z" />
+    </symbol>
+    <symbol id="icon-file" viewBox="0 0 16 16">
+      <path
+        d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z" />
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 16 16">
+      <path
+        d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z" />
+    </symbol>
+  </svg>
+
   <nav class="navbar navbar-expand navbar-light bg-white border-bottom sticky-top">
     <div class="container-fluid px-3 px-md-4">
       <span class="navbar-brand mb-0 h1 fs-5">WebDAV Index</span>
-      <div class="dropdown d-none" id="nav-session">
+      <div class="dropdown" x-show="baseUrl" x-cloak>
         <button type="button"
           class="btn btn-link btn-sm text-secondary text-decoration-none dropdown-toggle text-truncate nav-host-btn"
           id="nav-host-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Server menu">
-          <span id="nav-host"></span>
+          <span x-text="baseUrl"></span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end nav-host-menu" aria-labelledby="nav-host-btn" id="nav-host-menu">
+        <ul class="dropdown-menu dropdown-menu-end nav-host-menu" aria-labelledby="nav-host-btn">
+          <template x-for="host in hosts" :key="host">
+            <li>
+              <button type="button" class="dropdown-item nav-host-item" :class="{ active: host === baseUrl }"
+                :title="host" @click="switchHost(host)">
+                <span class="nav-host-item-label" x-text="host"></span>
+                <svg class="app-icon nav-host-item-check" aria-hidden="true" x-show="host === baseUrl">
+                  <use href="#icon-check" />
+                </svg>
+              </button>
+            </li>
+          </template>
           <li>
-            <hr class="dropdown-divider my-1" id="nav-host-divider">
+            <hr class="dropdown-divider my-1">
           </li>
           <li>
-            <button type="button" class="dropdown-item" id="btn-connect-another">Connect another…</button>
+            <button type="button" class="dropdown-item" @click="openConnectAnother()">Connect another ...</button>
           </li>
           <li>
-            <button type="button" class="dropdown-item" id="btn-signout">Sign out</button>
+            <button type="button" class="dropdown-item" @click="signOut()">Sign out</button>
           </li>
         </ul>
       </div>
@@ -39,65 +70,104 @@
   </nav>
 
   <main class="container-fluid px-3 px-md-4 py-3">
-    <nav aria-label="breadcrumb" id="breadcrumb-nav" class="mb-3 d-none">
-      <ol class="breadcrumb mb-0" id="breadcrumb"></ol>
+    <nav aria-label="breadcrumb" class="mb-3" x-show="baseUrl" x-cloak>
+      <ol class="breadcrumb mb-0">
+        <template x-for="crumb in crumbs" :key="crumb.path">
+          <li class="breadcrumb-item" :class="{ active: crumb.isLast }" :aria-current="crumb.isLast ? 'page' : false">
+            <template x-if="crumb.isLast">
+              <span x-text="crumb.label"></span>
+            </template>
+            <template x-if="!crumb.isLast">
+              <a :href="crumb.href" x-text="crumb.label" @click.prevent="navigate(crumb.path)"></a>
+            </template>
+          </li>
+        </template>
+      </ol>
     </nav>
 
-    <div id="status-area" class="d-none" role="status"></div>
-
-    <div id="listing-area" class="d-none">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 listing-table">
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col" class="col-mtime">Last Modified</th>
-              <th scope="col" class="col-size text-end">Size</th>
-            </tr>
-          </thead>
-          <tbody id="listing-body"></tbody>
-        </table>
+    <div class="text-center py-5" role="status" x-show="loading" x-cloak>
+      <div class="spinner-border text-secondary" role="status">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <div class="mt-2 text-muted small">Loading directory ...</div>
+    </div>
+
+    <div class="alert alert-danger mb-0" role="alert" x-show="errorMessage" x-cloak x-text="errorMessage"></div>
+
+    <div class="table-responsive" x-show="baseUrl && !loading && !errorMessage" x-cloak>
+      <table class="table table-hover align-middle mb-0 listing-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col" class="col-mtime">Last Modified</th>
+            <th scope="col" class="col-size">Size</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="entry in entries" :key="entry.relativePath">
+            <tr>
+              <td class="col-name">
+                <a href="#" class="listing-link" @click.prevent="openEntry(entry)">
+                  <svg :class="`app-icon me-2 ${entry.isCollection ? 'text-warning' : 'text-secondary'}`"
+                    aria-hidden="true">
+                    <use :href="entry.isCollection ? '#icon-folder' : '#icon-file'" />
+                  </svg>
+                  <span x-text="entry.isCollection ? `${entry.name}/` : entry.name"></span>
+                </a>
+              </td>
+              <td class="col-mtime text-nowrap text-secondary" x-text="formatMtime(entry.lastModified)"></td>
+              <td class="col-size text-nowrap text-secondary"
+                x-text="entry.isCollection ? '-' : formatSize(entry.size)"></td>
+            </tr>
+          </template>
+          <template x-if="entries.length === 0">
+            <tr>
+              <td colspan="3" class="text-muted text-center py-4">(empty)</td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
     </div>
   </main>
 
   <!-- Connect Modal -->
   <div class="modal fade" id="connect-modal" tabindex="-1" aria-labelledby="connect-modal-title" aria-hidden="true"
-    data-bs-backdrop="static" data-bs-keyboard="false">
+    data-bs-backdrop="static" data-bs-keyboard="false" x-ref="connectModal">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-        <form id="connect-form" novalidate>
+        <form novalidate x-ref="connectForm" :class="{ 'was-validated': showValidation }" @submit.prevent="connect()">
           <div class="modal-header">
             <h5 class="modal-title" id="connect-modal-title">Connect to WebDAV</h5>
           </div>
           <div class="modal-body">
-            <p class="text-muted small mb-3" id="connect-hint">
-              Enter the WebDAV URL and credentials to browse directories.
-            </p>
+            <p class="text-muted small mb-3" x-text="connectHint"></p>
             <div class="mb-3">
               <label for="input-webdav-url" class="form-label">WebDAV URL</label>
               <input type="url" class="form-control" id="input-webdav-url" name="url"
-                placeholder="https://dav.example.com/files/" required autocomplete="url">
+                placeholder="https://dav.example.com/files/" required autocomplete="url" x-ref="inputUrl"
+                x-model="form.url" @input="syncUrlValidity()">
               <div class="invalid-feedback">Please enter a valid http(s) URL</div>
             </div>
             <div class="mb-3">
               <label for="input-username" class="form-label">Username</label>
               <input type="text" class="form-control" id="input-username" name="username" required
-                autocomplete="username">
+                autocomplete="username" x-ref="inputUsername" x-model="form.username">
               <div class="invalid-feedback">Please enter a username</div>
             </div>
             <div class="mb-0">
               <label for="input-password" class="form-label">Password</label>
               <input type="password" class="form-control" id="input-password" name="password" required
-                autocomplete="current-password">
+                autocomplete="current-password" x-model="form.password">
               <div class="invalid-feedback">Please enter a password</div>
             </div>
-            <div class="alert alert-danger mt-3 mb-0 d-none" id="connect-error" role="alert"></div>
+            <div class="alert alert-danger mt-3 mb-0" role="alert" x-show="connectError" x-cloak x-text="connectError">
+            </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary d-none" id="btn-connect-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="btn-connect">
-              <span class="spinner-border spinner-border-sm me-1 d-none" id="connect-spinner" aria-hidden="true"></span>
+            <button type="button" class="btn btn-outline-secondary" x-show="connectCancellable" x-cloak
+              :disabled="connecting" @click="modal.hide()">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="connecting">
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" x-show="connecting" x-cloak></span>
               Connect
             </button>
           </div>
@@ -106,7 +176,9 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 

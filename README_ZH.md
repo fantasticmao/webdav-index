@@ -62,10 +62,12 @@ location /files/ {
 ## 实现原理
 
 1. **列目录**：由 [webdav](https://github.com/perry-mitchell/webdav-client) 客户端对目标目录发送 WebDAV `PROPFIND`（`Depth: 1`，无请求体即 `allprop`），解析 `207 Multi-Status` XML，取出 `href`、`getlastmodified`、`getcontentlength`、`resourcetype/collection`。该库以浏览器 ES 模块形式从 CDN 直接加载，不引入构建步骤。
-2. **鉴权**：每个请求带 `Authorization: Basic ...`，请求头在本地生成（非 ASCII 账号密码按 UTF-8 编码），凭证按 WebDAV 根 URL 存入 `localStorage`，关闭标签页后仍可复用，Sign out 或清除站点数据后失效。同一浏览器可记住多个根 URL，并在右上角切换。
-3. **路由**：使用 query 参数 `path` 表示当前目录，配合 `pushState` / `popstate` 支持前进后退。
-4. **打开文件**：在新标签页打开资源 URL，并将用户名密码写入 URL userinfo（`https://user:pass@host/path`），以便浏览器直接渲染图片、PDF 等，无需再弹一次登录框。
-5. **CORS**：静态站与 WebDAV 通常不同源，浏览器会先发 `OPTIONS` 预检；服务端未正确回 CORS 头时，前端只能提示网络/跨域错误。
+2. **鉴权**：每个请求带 `Authorization: Basic ...`，请求头在本地生成（非 ASCII 账号密码按 UTF-8 编码），凭证以 WebDAV 根 URL 为索引存入 `localStorage` 的 `webdav-index:creds`，关闭标签页后仍可复用，Sign out 或清除站点数据后失效。同一浏览器可记住多个根 URL，并在右上角切换。
+3. **界面**：[Bootstrap](https://getbootstrap.com/) 负责样式与弹窗/下拉组件，[Alpine.js](https://alpinejs.dev/) 负责声明式渲染与状态，目录列表、面包屑、连接表单都直接由 `index.html` 中的模板驱动。
+4. **路由**：使用 query 参数 `path` 表示当前目录，配合 `pushState` / `popstate` 支持前进后退。
+5. **打开文件**：在新标签页打开资源 URL，并将用户名密码写入 URL userinfo（`https://user:pass@host/path`），以便浏览器直接渲染图片、PDF 等，无需再弹一次登录框。
+6. **CORS**：静态站与 WebDAV 通常不同源，浏览器会先发 `OPTIONS` 预检；服务端未正确回 CORS 头时，前端只能提示网络/跨域错误。
+7. **第三方依赖**：Bootstrap、Alpine.js、webdav、pretty-bytes 全部按精确版本从 jsDelivr 加载并带 `integrity` 校验，仓库里不含 `node_modules`，也不需要打包。
 
 ## 常见问题
 
