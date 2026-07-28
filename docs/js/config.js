@@ -1,4 +1,3 @@
-const LEGACY_CREDENTIALS_PREFIX = "webdav-index:creds:";
 const URL_PARAM = "url";
 const PATH_PARAM = "path";
 
@@ -24,7 +23,7 @@ export function normalizeBaseUrl(value) {
 }
 
 /** Directory path convention: leading `/`, trailing `/`, root is `/`. */
-export function normalizePath(value) {
+function normalizePath(value) {
   let p = value || "/";
   try {
     p = decodeURIComponent(p);
@@ -78,43 +77,14 @@ export function getPath() {
   return normalizePath(raw || "/");
 }
 
-export function setPath(path, options = {}) {
+export function setPath(path) {
   const next = normalizePath(path);
   const href = buildAppSearch({ path: next });
 
   // pushState, so directory navigation is undoable with the browser back button.
-  if (options.replace || next === getPath()) {
+  if (next === getPath()) {
     window.history.replaceState(null, "", href);
   } else {
     window.history.pushState(null, "", href);
   }
-}
-
-/**
- * Fold credentials stored under the old per-URL keys (`webdav-index:creds:<url>`) into a
- * single object and drop the old keys, so saved logins survive the storage change.
- */
-export function takeLegacyCredentials() {
-  const migrated = {};
-  const movedKeys = [];
-
-  for (let i = 0; i < localStorage.length; i += 1) {
-    const key = localStorage.key(i);
-    if (!key || !key.startsWith(LEGACY_CREDENTIALS_PREFIX)) continue;
-
-    const baseUrl = normalizeBaseUrl(key.slice(LEGACY_CREDENTIALS_PREFIX.length));
-    if (!baseUrl) continue;
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key) || "");
-      if (parsed && typeof parsed.username === "string" && typeof parsed.password === "string") {
-        migrated[baseUrl] = { username: parsed.username, password: parsed.password };
-        movedKeys.push(key);
-      }
-    } catch {
-      // unreadable entry, leave it alone
-    }
-  }
-
-  movedKeys.forEach((key) => localStorage.removeItem(key));
-  return migrated;
 }

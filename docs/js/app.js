@@ -8,7 +8,6 @@ import {
   getPath,
   setPath,
   buildAppSearch,
-  takeLegacyCredentials,
 } from "./config.js";
 import { listDirectory, openFile } from "./webdav.js";
 import { applyTheme, resolveTheme, storeTheme } from "./theme.js";
@@ -46,7 +45,6 @@ Alpine.data("app", () => ({
   formatSize,
 
   init() {
-    Object.assign(this.credentials, takeLegacyCredentials());
     this.hosts = this.hosts
       .map((host) => normalizeBaseUrl(host))
       .filter((host, i, all) => host && all.indexOf(host) === i);

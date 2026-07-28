@@ -17,7 +17,7 @@ function isAnonymous({ username, password }) {
  * Keeping the client on `AuthType.None` also makes `getFileDownloadLink` return a clean
  * URL, which lets `URL` percent-encode the userinfo properly.
  */
-export function basicAuthHeader(username, password) {
+function basicAuthHeader(username, password) {
   const token = `${username}:${password}`;
   try {
     return "Basic " + btoa(token);
@@ -89,7 +89,6 @@ function toEntry(item) {
   const hasLength = length !== undefined && length !== "";
   return {
     name: item.basename,
-    hrefPath: item.filename,
     relativePath: isCollection ? item.filename + "/" : item.filename,
     isCollection,
     lastModified: item.lastmod || null,

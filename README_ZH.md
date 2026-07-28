@@ -2,7 +2,7 @@
 
 ## 这是什么
 
-WebDAV-Index 是一个基于 WebDAV 协议，把远程文件与目录以表格平铺展示的纯前端 Web 应用程序，可自建部署到 GitHub Pages，支持桌面与移动端便捷浏览。
+WebDAV-Index 是一个纯前端 Web 应用程序，可以基于 WebDAV 协议，以表格平铺形式展示远程的文件和目录。可快速自建部署至 GitHub / Cloudflare Pages，支持桌面端与移动端响应式便捷浏览。
 
 WebDAV-Index 当前支持以下特性：
 
@@ -16,20 +16,20 @@ WebDAV-Index 当前支持以下特性：
 
 ## 快速开始
 
-### WebDAV 客户端内容浏览
+### 浏览 WebDAV 文件和目录
 
 浏览器打开：
 
 ```text
-https://fantasticmao.github.io/webdav-index/?url=https://webdav.example.com/files/
+https://fantasticmao.github.io/webdav-index/?url=encode(web_dav_server_url)&path=encode(web_dav_file_path)
 ```
 
-| 参数   | 说明                                    |
-| ------ | --------------------------------------- |
-| `url`  | WebDAV 远程服务 URL，需要支持 CORS 访问 |
-| `path` | WebDAV 内容相对根目录的路径，缺省为 `/` |
+| 参数   | 说明                                |
+| ------ | ----------------------------------- |
+| `url`  | WebDAV 服务 URL，需要支持 CORS 访问 |
+| `path` | WebDAV 文件相对路径，缺省默认为 `/` |
 
-### WebDAV 服务端 CORS 配置
+### 配置 WebDAV 服务端 CORS
 
 跨域访问时，服务端必须允许浏览器的 `OPTIONS` / `PROPFIND` / `GET`。列目录实际只需要放行 `Authorization` 与 `Depth` 两个非安全列表请求头；无需认证的服务只放行 `Depth` 即可，因为匿名访问不会发送 `Authorization`。下面的配置是一个便于扩展的超集：
 
@@ -99,7 +99,7 @@ A: 新标签页通过 URL userinfo 携带凭证；部分浏览器会限制或剥
 
 Q: `path` 与 WebDAV 上的真实路径是什么关系？
 
-A: `path` 是相对于 `url` 所指向根目录的路径。例如 `url=https://webdav.example.com/files/` 且 `path=/a/b/`，实际请求的是 `https://webdav.example.com/files/a/b/`。
+A: `path` 是相对于 `url` 所指向根目录的路径。例如 `url=https://webdav.example.com/` 且 `path=/a/b/`，实际请求的是 `https://webdav.example.com/a/b/`。
 
 ---
 

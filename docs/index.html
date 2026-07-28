@@ -157,7 +157,7 @@
     </div>
   </main>
 
-  <div class="modal fade" id="connect-modal" tabindex="-1" aria-labelledby="connect-modal-title" aria-hidden="true"
+  <div class="modal fade" tabindex="-1" aria-labelledby="connect-modal-title" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="false" x-ref="connectModal">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -170,7 +170,7 @@
             <div class="mb-3">
               <label for="input-webdav-url" class="form-label">WebDAV URL</label>
               <input type="url" class="form-control" id="input-webdav-url" name="url"
-                placeholder="https://webdav.example.com/files/" required autocomplete="url" x-ref="inputUrl"
+                placeholder="https://webdav.example.com/" required autocomplete="url" x-ref="inputUrl"
                 x-model="form.url" @input="syncUrlValidity()">
               <div class="invalid-feedback">Please enter a valid http(s) URL</div>
             </div>
@@ -184,7 +184,7 @@
               <input type="password" class="form-control" id="input-password" name="password"
                 autocomplete="current-password" x-model="form.password">
             </div>
-            <div class="alert alert-danger mt-3 mb-0" role="alert" x-show="connectError" x-cloak x-text="connectError">
+            <div class="alert alert-warning mt-3 mb-0" role="alert" x-show="connectError" x-cloak x-text="connectError">
             </div>
           </div>
           <div class="modal-footer">
