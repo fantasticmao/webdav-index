@@ -1,6 +1,10 @@
 /**
- * Minimal WebDAV client: PROPFIND listing + open file in new tab with Basic auth.
+ * WebDAV client: directory listing + open file in new tab with Basic auth.
+ *
+ * Backed by the `webdav` package browser build, loaded straight from the CDN as a
+ * self-contained ES module so the app stays build-free.
  */
+import { createClient } from "https://cdn.jsdelivr.net/npm/webdav@5.10.0/dist/web/index.js";
 
 /**
  * @typedef {object} WebDavEntry
@@ -13,12 +17,26 @@
  */
 
 /**
+ * Subset of the `FileStat` shape returned by the client with `details: true`.
+ * @typedef {object} FileStat
+ * @property {string} filename Decoded path relative to the client base URL, no trailing slash
+ * @property {string} basename
+ * @property {string|null} lastmod
+ * @property {number} size Falls back to 0 when the server omits `getcontentlength`
+ * @property {'file'|'directory'} type
+ * @property {Record<string, unknown>} [props] Raw properties, namespace prefixes stripped
+ */
+
+/**
+ * The client's own Basic auth support base64-encodes as Latin1 and throws on non-ASCII
+ * credentials, so the header is built here and passed through as a custom header instead.
+ * Keeping the client on `AuthType.None` also makes `getFileDownloadLink` return a clean
+ * URL, which lets `URL` percent-encode the userinfo properly.
  * @param {string} username
  * @param {string} password
  * @returns {string}
  */
 export function basicAuthHeader(username, password) {
-  // btoa expects Latin1; for non-ASCII usernames use TextEncoder fallback
   const token = `${username}:${password}`;
   try {
     return "Basic " + btoa(token);
@@ -32,68 +50,24 @@ export function basicAuthHeader(username, password) {
   }
 }
 
-/**
- * Join base URL with a relative path (leading slash path from hash).
- * @param {string} baseUrl  Trailing slash
- * @param {string} relativePath  e.g. `/` or `/photos/2024/`
- * @returns {string}
- */
-export function resolveUrl(baseUrl, relativePath) {
-  const base = new URL(baseUrl);
-  let rel = relativePath || "/";
-  if (!rel.startsWith("/")) rel = "/" + rel;
-  // Strip leading slash then append to base pathname
-  const basePath = base.pathname.endsWith("/") ? base.pathname : base.pathname + "/";
-  const suffix = rel === "/" ? "" : rel.replace(/^\//, "");
-  const encodedSuffix = suffix
-    .split("/")
-    .map((seg) => (seg === "" ? "" : encodeURIComponent(decodeURIComponentSafe(seg))))
-    .join("/");
-  base.pathname = basePath + encodedSuffix;
-  return base.href;
-}
-
-function decodeURIComponentSafe(s) {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-}
+/** @type {{ key: string, client: any }|null} */
+let cachedClient = null;
 
 /**
- * Compute path of an entry relative to the WebDAV base URL.
  * @param {string} baseUrl
- * @param {string} href From PROPFIND (may be absolute or path-absolute)
- * @returns {string} relative path starting with /
+ * @param {{ username: string, password: string }} credentials
  */
-export function hrefToRelativePath(baseUrl, href) {
-  const base = new URL(baseUrl);
-  let path;
-  try {
-    const abs = new URL(href, base);
-    path = abs.pathname;
-  } catch {
-    path = href;
+function getClient(baseUrl, credentials) {
+  const key = `${baseUrl}\u0000${credentials.username}\u0000${credentials.password}`;
+  if (!cachedClient || cachedClient.key !== key) {
+    cachedClient = {
+      key,
+      client: createClient(baseUrl, {
+        headers: { Authorization: basicAuthHeader(credentials.username, credentials.password) },
+      }),
+    };
   }
-  path = decodeURIComponentSafe(path);
-
-  let basePath = decodeURIComponentSafe(base.pathname);
-  if (!basePath.endsWith("/")) basePath += "/";
-  if (!path.startsWith("/")) path = "/" + path;
-
-  let relative;
-  if (path.startsWith(basePath)) {
-    relative = "/" + path.slice(basePath.length);
-  } else if (path === basePath.replace(/\/$/, "")) {
-    relative = "/";
-  } else {
-    // Fallback: use last segment
-    relative = "/" + path.split("/").filter(Boolean).pop();
-  }
-  relative = relative.replace(/\/+/g, "/");
-  if (relative === "") relative = "/";
-  return relative;
+  return cachedClient.client;
 }
 
 /**
@@ -103,192 +77,121 @@ export function hrefToRelativePath(baseUrl, href) {
  * @returns {Promise<WebDavEntry[]>}
  */
 export async function listDirectory(baseUrl, relativePath, credentials) {
-  const url = resolveUrl(baseUrl, relativePath);
-  const auth = basicAuthHeader(credentials.username, credentials.password);
+  const client = getClient(baseUrl, credentials);
+  const currentPath = relativePath || "/";
 
-  let response;
+  let result;
   try {
-    response = await fetch(url, {
-      method: "PROPFIND",
-      headers: {
-        Authorization: auth,
-        Depth: "1",
-        "Content-Type": "application/xml; charset=utf-8",
-      },
-      body: `<?xml version="1.0" encoding="utf-8" ?>
-<d:propfind xmlns:d="DAV:">
-  <d:prop>
-    <d:displayname/>
-    <d:getlastmodified/>
-    <d:getcontentlength/>
-    <d:resourcetype/>
-  </d:prop>
-</d:propfind>`,
-    });
+    // `details` exposes the raw props, the only way to tell a 0-byte file from a
+    // server that omits `getcontentlength` (both surface as `size: 0`).
+    result = await client.getDirectoryContents(currentPath, { details: true });
   } catch (err) {
+    throw toAppError(err);
+  }
+
+  /** @type {FileStat[]} */
+  const items = result.data;
+  return items
+    .filter((item) => isImmediateChild(currentPath, item.filename))
+    .map(toEntry)
+    .sort(compareEntries);
+}
+
+/**
+ * `Depth: 1` is the server's job; some implementations over-report, so keep filtering
+ * to direct children ourselves.
+ * @param {string} currentPath
+ * @param {string} filename
+ */
+function isImmediateChild(currentPath, filename) {
+  const parent = currentPath.endsWith("/") ? currentPath : currentPath + "/";
+  if (!filename.startsWith(parent)) return false;
+  const rest = filename.slice(parent.length);
+  return rest !== "" && !rest.includes("/");
+}
+
+/**
+ * `filename` is decoded, starts with `/` and has no trailing slash; directories are
+ * normalized back to a trailing slash to match the app's path format.
+ * @param {FileStat} item
+ * @returns {WebDavEntry}
+ */
+function toEntry(item) {
+  const isCollection = item.type === "directory";
+  const length = item.props?.getcontentlength;
+  const hasLength = length !== undefined && length !== "";
+  return {
+    name: item.basename,
+    hrefPath: item.filename,
+    relativePath: isCollection ? item.filename + "/" : item.filename,
+    isCollection,
+    lastModified: item.lastmod || null,
+    size: hasLength && Number.isFinite(item.size) ? item.size : null,
+  };
+}
+
+/**
+ * Directories first, then by name.
+ * @param {WebDavEntry} a
+ * @param {WebDavEntry} b
+ */
+function compareEntries(a, b) {
+  if (a.isCollection !== b.isCollection) return a.isCollection ? -1 : 1;
+  return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+}
+
+/**
+ * Translate client errors into the `code`-tagged errors the app branches on.
+ * The client throws `Error` with `status` / `response` for HTTP failures, and lets
+ * `fetch` rejections (network / CORS) through as `TypeError`.
+ * @param {any} err
+ * @returns {Error}
+ */
+function toAppError(err) {
+  const status = err?.status;
+
+  if (status === 401 || status === 403) {
+    const error = new Error("Authentication failed. Please check your username and password.");
+    error.code = "AUTH";
+    error.status = status;
+    error.cause = err;
+    return error;
+  }
+
+  if (typeof status === "number") {
+    const error = new Error(`PROPFIND failed: HTTP ${status}`);
+    error.code = "HTTP";
+    error.status = status;
+    error.cause = err;
+    return error;
+  }
+
+  if (err?.name === "TypeError") {
     const error = new Error(
       "Unable to reach the WebDAV server. If this is a cross-origin request, ensure the server allows CORS (PROPFIND / Authorization / Depth).",
     );
-    error.cause = err;
     error.code = "NETWORK";
-    throw error;
+    error.cause = err;
+    return error;
   }
 
-  if (response.status === 401 || response.status === 403) {
-    const error = new Error("Authentication failed. Please check your username and password.");
-    error.code = "AUTH";
-    error.status = response.status;
-    throw error;
-  }
-
-  if (response.status !== 207 && response.status !== 200) {
-    const error = new Error(`PROPFIND failed: HTTP ${response.status}`);
-    error.code = "HTTP";
-    error.status = response.status;
-    throw error;
-  }
-
-  const text = await response.text();
-  const entries = parseMultiStatus(text, baseUrl, relativePath);
-  return entries;
+  const error = new Error(err?.message || "Failed to read the WebDAV response.");
+  error.code = "PARSE";
+  error.cause = err;
+  return error;
 }
 
 /**
- * @param {string} xmlText
- * @param {string} baseUrl
- * @param {string} currentRelativePath
- * @returns {WebDavEntry[]}
- */
-function parseMultiStatus(xmlText, baseUrl, currentRelativePath) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "application/xml");
-  if (doc.querySelector("parsererror")) {
-    const error = new Error("Failed to parse WebDAV response XML.");
-    error.code = "PARSE";
-    throw error;
-  }
-
-  const responses = [...doc.getElementsByTagNameNS("DAV:", "response")];
-  // Some servers omit namespace or use different prefix — also try localName
-  const nodes =
-    responses.length > 0
-      ? responses
-      : [...doc.getElementsByTagName("response")].filter((el) => el.localName === "response");
-
-  /** @type {WebDavEntry[]} */
-  const entries = [];
-  const currentNorm = normalizeDirPath(currentRelativePath);
-
-  for (const node of nodes) {
-    const hrefEl =
-      node.getElementsByTagNameNS("DAV:", "href")[0] ||
-      [...node.getElementsByTagName("href")].find((e) => e.localName === "href");
-    if (!hrefEl) continue;
-    const href = hrefEl.textContent?.trim() || "";
-    if (!href) continue;
-
-    const relativePath = hrefToRelativePath(baseUrl, href);
-    const isCollection = hasCollection(node);
-
-    // Skip the directory itself
-    const entryNorm = isCollection ? normalizeDirPath(relativePath) : relativePath;
-    if (entryNorm === currentNorm || relativePath === currentNorm.replace(/\/$/, "")) {
-      continue;
-    }
-    // Only immediate children
-    if (!isImmediateChild(currentNorm, entryNorm, isCollection)) {
-      continue;
-    }
-
-    const displayNameEl =
-      node.getElementsByTagNameNS("DAV:", "displayname")[0] ||
-      [...node.getElementsByTagName("displayname")].find((e) => e.localName === "displayname");
-    let name = displayNameEl?.textContent?.trim() || "";
-    if (!name) {
-      const parts = relativePath.split("/").filter(Boolean);
-      name = parts[parts.length - 1] || relativePath;
-    }
-    if (isCollection && !name.endsWith("/")) {
-      // display with slash in UI separately
-    }
-
-    const modifiedEl =
-      node.getElementsByTagNameNS("DAV:", "getlastmodified")[0] ||
-      [...node.getElementsByTagName("getlastmodified")].find(
-        (e) => e.localName === "getlastmodified",
-      );
-    const lengthEl =
-      node.getElementsByTagNameNS("DAV:", "getcontentlength")[0] ||
-      [...node.getElementsByTagName("getcontentlength")].find(
-        (e) => e.localName === "getcontentlength",
-      );
-
-    const sizeRaw = lengthEl?.textContent?.trim();
-    const size = sizeRaw != null && sizeRaw !== "" ? Number(sizeRaw) : null;
-
-    entries.push({
-      name,
-      hrefPath: href,
-      relativePath: isCollection ? normalizeDirPath(relativePath) : relativePath.replace(/\/$/, ""),
-      isCollection,
-      lastModified: modifiedEl?.textContent?.trim() || null,
-      size: Number.isFinite(size) ? size : null,
-    });
-  }
-
-  entries.sort((a, b) => {
-    if (a.isCollection !== b.isCollection) return a.isCollection ? -1 : 1;
-    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-  });
-
-  return entries;
-}
-
-function hasCollection(responseNode) {
-  const types =
-    responseNode.getElementsByTagNameNS("DAV:", "resourcetype")[0] ||
-    [...responseNode.getElementsByTagName("resourcetype")].find(
-      (e) => e.localName === "resourcetype",
-    );
-  if (!types) return false;
-  const collections = types.getElementsByTagNameNS("DAV:", "collection");
-  if (collections.length > 0) return true;
-  return [...types.getElementsByTagName("collection")].some((e) => e.localName === "collection");
-}
-
-function normalizeDirPath(path) {
-  let p = path || "/";
-  if (!p.startsWith("/")) p = "/" + p;
-  p = p.replace(/\/+/g, "/");
-  if (p !== "/" && !p.endsWith("/")) p += "/";
-  return p;
-}
-
-function isImmediateChild(parentDir, childPath, childIsCollection) {
-  const parent = normalizeDirPath(parentDir);
-  const child = childIsCollection ? normalizeDirPath(childPath) : childPath.replace(/\/+$/, "");
-
-  if (parent === "/") {
-    const rest = child.startsWith("/") ? child.slice(1) : child;
-    if (!rest) return false;
-    const segments = rest.replace(/\/$/, "").split("/");
-    return segments.length === 1 && segments[0] !== "";
-  }
-
-  if (!child.startsWith(parent)) return false;
-  const rest = child.slice(parent.length).replace(/\/$/, "");
-  if (!rest) return false;
-  return !rest.includes("/");
-}
-
-/**
- * Open a file in a new browser tab using URL userinfo for Basic auth.
+ * Open a file in a new browser tab, carrying Basic credentials in URL userinfo so the
+ * browser can render images / PDFs without prompting again.
  * @param {string} baseUrl
  * @param {string} relativePath
  * @param {{ username: string, password: string }} credentials
  */
 export function openFile(baseUrl, relativePath, credentials) {
-  const url = new URL(resolveUrl(baseUrl, relativePath));
+  const client = getClient(baseUrl, credentials);
+  const url = new URL(client.getFileDownloadLink(relativePath));
+  // The URL setters percent-encode, unlike the client's own userinfo injection.
   url.username = credentials.username;
   url.password = credentials.password;
   window.open(url.href, "_blank", "noopener,noreferrer");

@@ -6,7 +6,7 @@ WebDAV-Index 是一个基于 WebDAV 协议，把远程文件与目录以表格�
 
 WebDAV-Index 当前支持以下特性：
 
-- **纯静态页面**：本项目没有后端，所有请求均在浏览器本地完成
+- **纯静态页面**：本项目没有后端，无需构建步骤，所有请求均在浏览器本地完成
 - **文件只读浏览**：列目录、面包屑导航、进入子目录；点击文件在新标签页打开预览
 - **URL 参数驱动**：`url` 指定 WebDAV 根地址，`path` 指定文件目录地址，便于分享与刷新
 - **HTTP 基本认证**：支持 HTTP Basic 认证，账号密码保存在本机浏览器的 `localStorage`
@@ -30,7 +30,7 @@ https://fantasticmao.github.io/webdav-index/?url=https://dav.example.com/files/
 
 ### WebDAV 服务端 CORS 配置
 
-跨域访问时，服务端必须允许浏览器的 `OPTIONS` / `PROPFIND` / `GET`。至少包含：
+跨域访问时，服务端必须允许浏览器的 `OPTIONS` / `PROPFIND` / `GET`。列目录实际只需要放行 `Authorization` 与 `Depth` 两个非安全列表请求头，下面的配置是一个便于扩展的超集：
 
 ```http
 Access-Control-Allow-Origin: *
@@ -61,8 +61,8 @@ location /files/ {
 
 ## 实现原理
 
-1. **列目录**：对目标目录发送 WebDAV `PROPFIND`（`Depth: 1`），解析 `207 Multi-Status` XML，取出 `href`、`displayname`、`getlastmodified`、`getcontentlength`、`resourcetype/collection`。
-2. **鉴权**：每个请求带 `Authorization: Basic ...`；凭证按 WebDAV 根 URL 存入 `localStorage`，关闭标签页后仍可复用，Sign out 或清除站点数据后失效。同一浏览器可记住多个根 URL，并在右上角切换。
+1. **列目录**：由 [webdav](https://github.com/perry-mitchell/webdav-client) 客户端对目标目录发送 WebDAV `PROPFIND`（`Depth: 1`，无请求体即 `allprop`），解析 `207 Multi-Status` XML，取出 `href`、`getlastmodified`、`getcontentlength`、`resourcetype/collection`。该库以浏览器 ES 模块形式从 CDN 直接加载，不引入构建步骤。
+2. **鉴权**：每个请求带 `Authorization: Basic ...`，请求头在本地生成（非 ASCII 账号密码按 UTF-8 编码），凭证按 WebDAV 根 URL 存入 `localStorage`，关闭标签页后仍可复用，Sign out 或清除站点数据后失效。同一浏览器可记住多个根 URL，并在右上角切换。
 3. **路由**：使用 query 参数 `path` 表示当前目录，配合 `pushState` / `popstate` 支持前进后退。
 4. **打开文件**：在新标签页打开资源 URL，并将用户名密码写入 URL userinfo（`https://user:pass@host/path`），以便浏览器直接渲染图片、PDF 等，无需再弹一次登录框。
 5. **CORS**：静态站与 WebDAV 通常不同源，浏览器会先发 `OPTIONS` 预检；服务端未正确回 CORS 头时，前端只能提示网络/跨域错误。
