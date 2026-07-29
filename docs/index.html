@@ -190,7 +190,13 @@
                             <label for="input-webdav-url" class="form-label">WebDAV URL</label>
                             <input type="url" class="form-control" id="input-webdav-url" name="url"
                                 placeholder="https://webdav.example.com/" required autocomplete="url" x-ref="inputUrl"
-                                x-model="form.url" @input="syncUrlValidity()" />
+                                list="saved-hosts" x-model="form.url" @input="onUrlInput()"
+                                @focus="$event.target.select()" />
+                            <datalist id="saved-hosts">
+                                <template x-for="host in sortedHosts" :key="host">
+                                    <option :value="host"></option>
+                                </template>
+                            </datalist>
                             <div class="invalid-feedback">Please enter a valid http(s) URL</div>
                         </div>
                         <div class="mb-3">
@@ -212,7 +218,7 @@
                             :disabled="connecting" @click="modal.hide()">
                             Cancel
                         </button>
-                        <button type="submit" class="btn btn-primary" :disabled="connecting">
+                        <button type="submit" class="btn btn-primary" x-ref="connectSubmit" :disabled="connecting">
                             <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" x-show="connecting"
                                 x-cloak></span>
                             Connect

@@ -1,8 +1,8 @@
 import Alpine from "https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/module.esm.min.js";
 import persist from "https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.15.12/dist/module.esm.min.js";
 import {
-  getWebdavBaseUrl,
   normalizeBaseUrl,
+  getWebdavBaseUrl,
   setWebdavBaseUrlInQuery,
   setActiveHostInQuery,
   getPath,
@@ -16,6 +16,24 @@ import { buildCrumbs, formatMtime, formatSize } from "./ui.js";
 Alpine.plugin(persist);
 
 Alpine.data("app", () => ({
+  /** The inline snippet in index.html already applied this to `<html>`. */
+  theme: resolveTheme(),
+
+  /** Known hosts, most recently used first. */
+  hosts: Alpine.$persist([]).as("webdav-index:hosts"),
+  /** `{ [baseUrl]: { username, password } }` */
+  credentials: Alpine.$persist({}).as("webdav-index:creds"),
+
+  modal: null,
+  form: { url: "", username: "", password: "" },
+  /** The host whose stored credentials currently sit in the form, if any. */
+  autofilledHost: "",
+  connecting: false,
+  connectError: "",
+  connectHint: "",
+  connectCancellable: false,
+  showValidation: false,
+
   /** Active WebDAV base URL, or null when there is no session. */
   baseUrl: null,
   path: "/",
@@ -24,22 +42,6 @@ Alpine.data("app", () => ({
   errorMessage: "",
   /** Incremented per load so a superseded request cannot clobber newer state. */
   loadToken: 0,
-
-  /** Known hosts, most recently used first. */
-  hosts: Alpine.$persist([]).as("webdav-index:hosts"),
-  /** `{ [baseUrl]: { username, password } }` */
-  credentials: Alpine.$persist({}).as("webdav-index:creds"),
-
-  /** The inline snippet in index.html already applied this to `<html>`. */
-  theme: resolveTheme(),
-
-  form: { url: "", username: "", password: "" },
-  connecting: false,
-  connectError: "",
-  connectHint: "",
-  connectCancellable: false,
-  showValidation: false,
-  modal: null,
 
   formatMtime,
   formatSize,
@@ -69,12 +71,9 @@ Alpine.data("app", () => ({
         this.load();
         return;
       }
-      this.openConnect();
+      // Without a `url` to go by, offer the host the user reached for last.
+      this.openConnect({ prefillUrl: base ? null : (this.signedInHosts[0] ?? null) });
     });
-  },
-
-  get crumbs() {
-    return buildCrumbs(this.path, (path) => buildAppSearch({ path }));
   },
 
   /** Flipping it makes the choice explicit; until then the OS preference is followed. */
@@ -92,6 +91,15 @@ Alpine.data("app", () => ({
     return { username: entry.username, password: entry.password };
   },
 
+  /** Hosts we could switch to without asking for credentials again. */
+  get signedInHosts() {
+    return this.hosts.filter((host) => this.credentialsFor(host));
+  },
+
+  get sortedHosts() {
+    return [...this.hosts].sort((a, b) => a.localeCompare(b));
+  },
+
   rememberHost(baseUrl) {
     if (this.hosts[0] === baseUrl) return;
     this.hosts = [baseUrl, ...this.hosts.filter((host) => host !== baseUrl)];
@@ -102,13 +110,35 @@ Alpine.data("app", () => ({
     delete this.credentials[baseUrl];
   },
 
-  /** Hosts we could switch to without asking for credentials again. */
-  get signedInHosts() {
-    return this.hosts.filter((host) => this.credentialsFor(host));
+  /** Switch to another known host; resets the path to `/`. */
+  switchHost(host) {
+    const baseUrl = normalizeBaseUrl(host);
+    if (!baseUrl || baseUrl === this.baseUrl) return;
+
+    setActiveHostInQuery(baseUrl);
+    if (this.credentialsFor(baseUrl)) {
+      this.baseUrl = baseUrl;
+      this.rememberHost(baseUrl);
+      this.load();
+      return;
+    }
+    this.openConnect({ prefillUrl: baseUrl, cancellable: !!this.baseUrl });
   },
 
-  get sortedHosts() {
-    return [...this.hosts].sort((a, b) => a.localeCompare(b));
+  signOut() {
+    const baseUrl = this.baseUrl || getWebdavBaseUrl();
+    if (baseUrl) this.forgetHost(baseUrl);
+
+    const remaining = this.signedInHosts;
+    this.baseUrl = null;
+    this.entries = [];
+    this.errorMessage = "";
+
+    if (remaining.length > 0) {
+      this.switchHost(remaining[0]);
+      return;
+    }
+    this.openConnect();
   },
 
   /**
@@ -121,6 +151,36 @@ Alpine.data("app", () => ({
     );
   },
 
+  /** Picking a datalist suggestion arrives as an `input` event too, so this covers both. */
+  onUrlInput() {
+    this.syncUrlValidity();
+    this.applySavedCredentials();
+  },
+
+  applySavedCredentials() {
+    const host = normalizeBaseUrl(this.form.url);
+    // Half-typed URLs match nothing, and re-filling the host already in the form would
+    // undo whatever the user changed in the credential fields.
+    if (host && host === this.autofilledHost) return;
+
+    const credentials = host ? this.credentialsFor(host) : null;
+    if (!credentials) {
+      this.clearAutofilledCredentials();
+      return;
+    }
+    this.form.username = credentials.username;
+    this.form.password = credentials.password;
+    this.autofilledHost = host;
+  },
+
+  /** Never carry one host's password over to another server. */
+  clearAutofilledCredentials() {
+    if (!this.autofilledHost) return;
+    this.form.username = "";
+    this.form.password = "";
+    this.autofilledHost = "";
+  },
+
   openConnect(options = {}) {
     const { prefillUrl = null, cancellable = false } = options;
     const fromQuery = getWebdavBaseUrl();
@@ -129,6 +189,8 @@ Alpine.data("app", () => ({
     this.form.url = prefillUrl !== null ? prefillUrl : fromQuery || this.baseUrl || "";
     this.form.username = "";
     this.form.password = "";
+    this.autofilledHost = "";
+    this.applySavedCredentials();
     this.connectError = "";
     this.showValidation = false;
     this.$refs.inputUrl.setCustomValidity("");
@@ -146,6 +208,10 @@ Alpine.data("app", () => ({
 
     this.modal.show();
     queueMicrotask(() => {
+      if (this.autofilledHost) {
+        this.$refs.connectSubmit.focus();
+        return;
+      }
       (this.form.url ? this.$refs.inputUsername : this.$refs.inputUrl).focus();
     });
   },
@@ -189,35 +255,8 @@ Alpine.data("app", () => ({
     }
   },
 
-  /** Switch to another known host; resets the path to `/`. */
-  switchHost(host) {
-    const baseUrl = normalizeBaseUrl(host);
-    if (!baseUrl || baseUrl === this.baseUrl) return;
-
-    setActiveHostInQuery(baseUrl);
-    if (this.credentialsFor(baseUrl)) {
-      this.baseUrl = baseUrl;
-      this.rememberHost(baseUrl);
-      this.load();
-      return;
-    }
-    this.openConnect({ prefillUrl: baseUrl, cancellable: !!this.baseUrl });
-  },
-
-  signOut() {
-    const baseUrl = this.baseUrl || getWebdavBaseUrl();
-    if (baseUrl) this.forgetHost(baseUrl);
-
-    const remaining = this.signedInHosts;
-    this.baseUrl = null;
-    this.entries = [];
-    this.errorMessage = "";
-
-    if (remaining.length > 0) {
-      this.switchHost(remaining[0]);
-      return;
-    }
-    this.openConnect();
+  get crumbs() {
+    return buildCrumbs(this.path, (path) => buildAppSearch({ path }));
   },
 
   navigate(path) {
