@@ -15,6 +15,7 @@ Key constraints:
 ```text
 docs/                 # Site root; all code lives here
 ├── index.html        # The only page: Alpine templates, CDN dependencies, inline first-paint theme script
+├── favicon.svg       # Tab icon: the same folder glyph the file table uses
 ├── css/app.css       # Only the styles that Bootstrap utility classes cannot express
 └── js/
     ├── app.js        # Alpine component `app`: all UI state and interaction wiring; entry module
