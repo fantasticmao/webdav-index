@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <rect width="16" height="16" rx="3.5" fill="#6ea8fe" />
-  <!-- Same folder glyph as #icon-folder in index.html, scaled to leave a margin so it stays
-       readable at 16px. -->
-  <g transform="translate(2.6 3.05) scale(.66)" fill="#fff">
-    <path
-      d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z" />
+  <rect width="16" height="16" rx="3.5" fill="#0d6efd" />
+  <!-- Three uneven rows for the directory listing, plus a chevron for stepping into the next
+       level. Stroked instead of filled so the lines stay a full pixel wide once the browser
+       rasterizes this at 16px; the uneven row widths keep it from reading as a hamburger. The
+       chevron carries a heavier stroke than the rows because its diagonals lose the most weight
+       to antialiasing at that size. -->
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-width="1.8">
+      <path d="M3 4.7h4.4" />
+      <path d="M3 8h2.9" />
+      <path d="M3 11.3h3.7" />
+    </g>
+    <path d="M9.9 4.9 13 8l-3.1 3.1" stroke-width="2.4" />
   </g>
 </svg>
