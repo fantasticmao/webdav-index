@@ -28,9 +28,9 @@ README [English](README.md) | [中文](README_ZH.md)
 
 > **注意**：你的 WebDAV 服务必须启用跨域资源共享（CORS），至少需要放行 `OPTIONS`、`PROPFIND`、`GET` 请求方法，以及 `Authorization`、`Depth` 请求头。
 
-## 实现原理
-
 WebDAV-Index 直接在浏览器中列出远程目录、打开文件，既没有后端，也没有构建步骤。浏览是只读的：编辑、上传和删除文件都不在本项目的范围内。`.mp4`、`.jpg`、`.txt` 等文件能否预览，取决于浏览器的能力以及服务端返回的内容类型。
+
+## 实现原理
 
 WebDAV-Index 基于以下主要依赖构建：
 

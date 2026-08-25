@@ -28,9 +28,9 @@ Enter the URL of your WebDAV service, along with a username and password if the 
 
 > **Note**: Your WebDAV service must have Cross-Origin Resource Sharing (CORS) enabled. At a minimum, it has to allow the `OPTIONS`, `PROPFIND`, and `GET` methods, and the `Authorization` and `Depth` request headers.
 
-## How it works
-
 WebDAV-Index lists remote directories and opens files straight from the browser, with no backend and no build step. Browsing is read-only: editing, uploading, and deleting files are out of scope. Whether a file such as `.mp4`, `.jpg`, or `.txt` can be previewed depends on the capabilities of the browser and on the content type the server returns.
+
+## How it works
 
 WebDAV-Index is built on the following major dependencies:
 
