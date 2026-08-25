@@ -30,7 +30,6 @@ Alpine.data("app", () => ({
   autofilledHost: "",
   connecting: false,
   connectError: "",
-  connectHint: "",
   connectCancellable: false,
   showValidation: false,
 
@@ -194,17 +193,6 @@ Alpine.data("app", () => ({
     this.connectError = "";
     this.showValidation = false;
     this.$refs.inputUrl.setCustomValidity("");
-
-    if (!fromQuery && !this.baseUrl && !prefillUrl) {
-      this.connectHint =
-        "Enter the WebDAV URL and credentials. After connecting, the URL is saved in the address bar for refresh or sharing. Leave username and password empty if the server needs no authentication.";
-    } else if (cancellable) {
-      this.connectHint =
-        "Enter another WebDAV URL and credentials to connect. Leave username and password empty if the server needs no authentication.";
-    } else {
-      this.connectHint =
-        "Enter your credentials to browse, or leave them empty if the server needs no authentication. You can change the WebDAV URL if needed.";
-    }
 
     this.modal.show();
     queueMicrotask(() => {

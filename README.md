@@ -41,6 +41,21 @@ WebDAV-Index is built on the following major dependencies:
 
 ## Frequently Asked Questions
 
+Q: Why does Connect fail even though the same URL works in another client?
+
+A: WebDAV-Index runs in the browser, so listing a directory is a cross-origin `PROPFIND` request. Clients such as Finder, rclone, or curl are not browsers and do not need CORS.
+
+When the request is blocked, the app shows a short network error. The page cannot show the real CORS reason: `fetch` only rejects with an opaque `TypeError`. The detailed _blocked by CORS policy_ message appears only in the browser's developer tools.
+
+To diagnose:
+
+1. Open DevTools (F12) -> Console and look for `blocked by CORS policy`.
+2. In the Network tab, inspect the `OPTIONS` preflight, then `PROPFIND`. Typical failures are a missing `Access-Control-Allow-Origin` header, a method not listed in `Access-Control-Allow-Methods`, or `Authorization` / `Depth` missing from `Access-Control-Allow-Headers`.
+
+The server must allow the `OPTIONS`, `PROPFIND`, and `GET` methods, and the `Authorization` and `Depth` request headers.
+
+Also check mixed content: the GitHub Pages app is served over HTTPS, so an `http://` WebDAV URL is blocked the same way.
+
 ## License
 
 WebDAV-Index [License](https://github.com/fantasticmao/webdav-index/blob/main/LICENSE)

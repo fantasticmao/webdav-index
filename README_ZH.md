@@ -41,6 +41,21 @@ WebDAV-Index 基于以下主要依赖构建：
 
 ## 常见问题和回答
 
+Q: 为什么同一个 URL 在别的客户端能用，这里 Connect 却失败？
+
+A: WebDAV-Index 运行在浏览器中，列目录是一次跨域 `PROPFIND` 请求。Finder、rclone、curl 等不是浏览器，因此不需要 CORS。
+
+请求被拦截时，应用只会显示一条简短的网络错误。页面拿不到真正的 CORS 原因：`fetch` 只会以不透明的 `TypeError` 失败。详细的 _blocked by CORS policy_ 只出现在浏览器开发者工具里。
+
+排查步骤：
+
+1. 打开开发者工具（F12）-> Console，搜索 `blocked by CORS policy`。
+2. 在 Network 中查看 `OPTIONS` 预检，再看 `PROPFIND`。常见失败：缺少 `Access-Control-Allow-Origin`、方法不在 `Access-Control-Allow-Methods` 中，或 `Authorization` / `Depth` 不在 `Access-Control-Allow-Headers` 中。
+
+服务端必须放行 `OPTIONS`、`PROPFIND`、`GET` 方法，以及 `Authorization`、`Depth` 请求头。
+
+同步检查混合内容：GitHub Pages 上的应用是 HTTPS，访问 `http://` 的 WebDAV 地址会被同样拦住。
+
 ## 许可声明
 
 WebDAV-Index [License](https://github.com/fantasticmao/webdav-index/blob/main/LICENSE)

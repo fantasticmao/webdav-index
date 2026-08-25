@@ -112,8 +112,8 @@ function toAppError(err, anonymous) {
   if (status === 401 || status === 403) {
     const error = new Error(
       anonymous
-        ? "This WebDAV server requires authentication. Please enter a username and password."
-        : "Authentication failed. Please check your username and password.",
+        ? "This server requires a username and password."
+        : "Incorrect username or password.",
     );
     error.code = "AUTH";
     error.status = status;
@@ -122,7 +122,7 @@ function toAppError(err, anonymous) {
   }
 
   if (typeof status === "number") {
-    const error = new Error(`PROPFIND failed: HTTP ${status}`);
+    const error = new Error(httpErrorMessage(status));
     error.code = "HTTP";
     error.status = status;
     error.cause = err;
@@ -131,17 +131,25 @@ function toAppError(err, anonymous) {
 
   if (err?.name === "TypeError") {
     const error = new Error(
-      "Unable to reach the WebDAV server. If this is a cross-origin request, ensure the server allows CORS (PROPFIND / Authorization / Depth).",
+      "Unable to reach the WebDAV server. If the URL is correct, this is often a CORS issue — see the FAQ in the project README.",
     );
     error.code = "NETWORK";
     error.cause = err;
     return error;
   }
 
-  const error = new Error(err?.message || "Failed to read the WebDAV response.");
+  const error = new Error("The WebDAV server responded, but the listing could not be read.");
   error.code = "PARSE";
   error.cause = err;
   return error;
+}
+
+function httpErrorMessage(status) {
+  if (status === 404) return "This path was not found on the WebDAV server.";
+  if (status === 405) {
+    return "The server rejected PROPFIND (HTTP 405). It may not be a WebDAV endpoint.";
+  }
+  return `The WebDAV server returned HTTP ${status}.`;
 }
 
 /**
