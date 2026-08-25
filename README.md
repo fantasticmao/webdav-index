@@ -13,7 +13,7 @@ Everything runs in the browser, so your personal data stays within reach from an
 - [x] **List View**: files are laid out in a table showing the file name, last modified time, and size
 - [x] **Authentication**: optional HTTP Basic authentication
 - [x] **Persistent Credentials**: the username and password can be saved to `localStorage`
-- [x] **Connection Switching**: switch between saved connections in a couple of clicks
+- [x] **Connection Switching**: switch between saved connections without re-entering credentials
 - [x] **Mobile Friendly**: responsive layout
 
 ## Download and Install
