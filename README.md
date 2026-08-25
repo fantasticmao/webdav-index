@@ -10,11 +10,11 @@ Everything runs in the browser, so your personal data stays within reach from an
 
 ### Features
 
-- [x] **List View**: files are laid out in a table showing the file name, last modified time, and size
-- [x] **Authentication**: optional HTTP Basic authentication
-- [x] **Persistent Credentials**: the username and password can be saved to `localStorage`
+- [x] **List View**: files shown in a table with name, last modified time, and size
+- [x] **Authentication**: optional HTTP Basic authentication when the server requires it
+- [x] **Persistent Credentials**: username and password can be saved locally to `localStorage`
 - [x] **Connection Switching**: switch between saved connections without re-entering credentials
-- [x] **Mobile Friendly**: responsive layout
+- [x] **Mobile Friendly**: responsive layout that works on phones, tablets and desktops
 
 ## Download and Install
 
@@ -34,10 +34,10 @@ WebDAV-Index lists remote directories and opens files straight from the browser,
 
 WebDAV-Index is built on the following major dependencies:
 
-- [webdav-client](https://github.com/perry-mitchell/webdav-client): sends the WebDAV requests — directory listings and metadata — directly from the browser.
-- [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage): keeps connection details and credentials on the local machine for quick access and host switching.
-- [Bootstrap](https://getbootstrap.com/): supplies the UI components, grid, and responsive styles.
-- [Alpine.js](https://alpinejs.dev/): manages UI state and user interactions declaratively.
+- [webdav-client](https://github.com/perry-mitchell/webdav-client): sends WebDAV requests for listings and metadata directly from the browser.
+- [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage): keeps connection details and credentials locally for access and host switching.
+- [Bootstrap](https://getbootstrap.com/): supplies the UI components, grid system, and responsive styles for the layout.
+- [Alpine.js](https://alpinejs.dev/): manages UI state and user interactions in a declarative way from the browser.
 
 ## Frequently Asked Questions
 

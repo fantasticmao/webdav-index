@@ -5,9 +5,9 @@
 A **local-first, static, zero-build** WebDAV client: the browser lists a remote directory as a read-only table and opens files in a new tab.
 
 - **No backend, no build, no `package.json`.** Dependencies load from jsDelivr as native ES modules.
-- **Read-only.** No uploads, edits, deletes or other writes.
-- **Optional HTTP Basic auth.** Credentials stay in the user's `localStorage` (Alpine Persist) so known hosts can be switched without re-entering them.
-- **CORS is required** on the WebDAV server: `OPTIONS`, `PROPFIND`, `GET`, plus the `Authorization` and `Depth` headers.
+- **Read-only browsing.** Listing and opening files only; no uploads, edits, deletes or other writes.
+- **Optional HTTP Basic auth.** Credentials live in `localStorage` so known hosts switch without re-entry.
+- **CORS is required.** The server must allow `OPTIONS`, `PROPFIND`, `GET`, plus `Authorization` and `Depth`.
 
 ## Project layout
 
@@ -40,8 +40,8 @@ python3 -m http.server 8000 --directory docs
 - Follow `.editorconfig`: UTF-8, LF, 100 columns, trailing newline; 2-space JS/CSS, 4-space HTML.
 - **English only** for code, comments, UI copy and commits. `README_ZH.md` is the only Chinese file.
 - Comments explain _why_ (browser quirks, server compatibility, CORS), not what the code already says.
-- Prefer Bootstrap 5 utilities; add to `app.css` only when needed. Icons are the inline SVG `<symbol>` / `<use>` block in `index.html`.
-- User-facing changes need a matching update to both `README.md` and `README_ZH.md`.
+- Prefer Bootstrap 5 utilities; add to `app.css` only when needed. Icons stay as inline SVG in `index.html`.
+- User-facing changes — features, params, CORS, FAQ — need updates to both `README.md` and `README_ZH.md`.
 
 ## Security
 
