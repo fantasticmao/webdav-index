@@ -8,6 +8,8 @@ A local-first WebDAV client that browses remote files as a read-only list.
 
 Everything runs in the browser, so your personal data stays within reach from any device, at any time.
 
+![usage.png](usage.png)
+
 ### Features
 
 - [x] **List View**: files shown in a table with name, last modified time, and size
@@ -18,13 +20,13 @@ Everything runs in the browser, so your personal data stays within reach from an
 
 ## Download and Install
 
-Nothing to download or install — just open [https://fantasticmao.github.io/webdav-index/](https://fantasticmao.github.io/webdav-index/) in your browser.
+Nothing to download or install — just open [https://webdav-index.fantasticmao.cn/](https://webdav-index.fantasticmao.cn/) in your browser.
 
 ## Quick Start
 
 Enter the URL of your WebDAV service, along with a username and password if the service requires them, then click Connect.
 
-![quick-start.png](quick-start.png)
+![connect.png](connect.png)
 
 > **Note**: Your WebDAV service must have Cross-Origin Resource Sharing (CORS) enabled. At a minimum, it has to allow the `OPTIONS`, `PROPFIND`, and `GET` methods, and the `Authorization` and `Depth` request headers.
 

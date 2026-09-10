@@ -191,7 +191,7 @@
                         <div class="mb-3">
                             <label for="input-webdav-url" class="form-label">WebDAV URL</label>
                             <input type="url" class="form-control" id="input-webdav-url" name="url"
-                                placeholder="https://webdav.example.com/" required autocomplete="url" x-ref="inputUrl"
+                                placeholder="https://webdav.example.com" required autocomplete="url" x-ref="inputUrl"
                                 list="saved-hosts" x-model="form.url" @input="onUrlInput()"
                                 @focus="$event.target.select()" />
                             <datalist id="saved-hosts">

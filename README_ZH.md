@@ -8,6 +8,8 @@ README [English](README.md) | [中文](README_ZH.md)
 
 所有逻辑都运行在浏览器中，因此无论何时、使用什么设备，你的个人数据都触手可及。
 
+![usage.png](usage.png)
+
 ### 关键特性
 
 - [x] **列表视图**：以表格展示文件名、最后修改时间和大小
@@ -18,13 +20,13 @@ README [English](README.md) | [中文](README_ZH.md)
 
 ## 下载安装
 
-无需下载和安装，在浏览器中打开 [https://fantasticmao.github.io/webdav-index/](https://fantasticmao.github.io/webdav-index/) 即可。
+无需下载和安装，在浏览器中打开 [https://webdav-index.fantasticmao.cn/](https://webdav-index.fantasticmao.cn/) 即可。
 
 ## 快速开始
 
 填写 WebDAV 服务的 URL，如果该服务需要认证，则再填写账号和密码，然后点击 Connect。
 
-![quick-start.png](quick-start.png)
+![connect.png](connect.png)
 
 > **注意**：你的 WebDAV 服务必须启用跨域资源共享（CORS），至少需要放行 `OPTIONS`、`PROPFIND`、`GET` 请求方法，以及 `Authorization`、`Depth` 请求头。
 
