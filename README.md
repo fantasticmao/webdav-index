@@ -7,16 +7,11 @@ README [English](README.md) | [中文](README_ZH.md)
 
 ## What is this
 
-WebDAV-Index is a local-first WebDAV client that browses remote files as a read-only list. It is
-static and requires no build step: a single HTML file and a few ES modules, with all dependencies
-loaded from a CDN. It runs entirely in the browser, communicates with the WebDAV server directly,
-and sends data to no third party.
+WebDAV-Index is a local-first WebDAV client that browses remote files as a read-only list. It is static and requires no build step: a single HTML file and a few ES modules, with all dependencies loaded from a CDN. It runs entirely in the browser, communicates with the WebDAV server directly, and sends data to no third party.
 
 ![usage.png](usage.png)
 
-WebDAV-Index provides browsing only: it lists directories, navigates into subdirectories and opens
-files, and it does not upload, edit, rename or delete. It opens each file through the browser,
-which renders `.jpg`, `.txt` and `.mp4` in place and downloads the rest.
+WebDAV-Index provides browsing only: it lists directories, navigates into subdirectories and opens files, and it does not upload, edit, rename or delete. It opens each file through the browser, which renders `.jpg`, `.txt` and `.mp4` in place and downloads the rest.
 
 ## Features
 
@@ -28,20 +23,16 @@ which renders `.jpg`, `.txt` and `.mp4` in place and downloads the rest.
 
 ## Download and Install
 
-WebDAV-Index requires no download or installation: open
-[webdav-index.fantasticmao.cn][demo] in a browser and it is ready to use.
+WebDAV-Index requires no download or installation: open [webdav-index.fantasticmao.cn][demo] in a browser and it is ready to use.
 
 ## Quick Start
 
-WebDAV-Index opens a connection form on first visit. Enter the URL of the WebDAV service, add a
-username and password if the server requires authentication, then click Connect.
+WebDAV-Index opens a connection form on first visit. Enter the URL of the WebDAV service, add a username and password if the server requires authentication, then click Connect.
 
 ![connect.png](connect.png)
 
 > [!IMPORTANT]
-> WebDAV-Index runs in the browser, so the WebDAV server must allow cross-origin requests: the
-> `OPTIONS`, `PROPFIND` and `GET` methods, plus the `Authorization` and `Depth` request headers.
-> Without them the connection cannot be established, however correct the URL is; see the FAQ below.
+> WebDAV-Index runs in the browser, so the WebDAV server must allow cross-origin requests: the `OPTIONS`, `PROPFIND` and `GET` methods, plus the `Authorization` and `Depth` request headers. Without them the connection cannot be established, however correct the URL is; see the FAQ below.
 
 ## How it works
 
@@ -56,21 +47,15 @@ WebDAV-Index is built on the following dependencies, all loaded from a CDN as na
 
 ### Connect fails, but the same URL works in another client. Why?
 
-WebDAV-Index runs in the browser, so listing a directory is a cross-origin `PROPFIND` request,
-which the browser blocks unless the server explicitly allows it. Finder, rclone and curl are not
-browsers and are therefore not subject to CORS.
+WebDAV-Index runs in the browser, so listing a directory is a cross-origin `PROPFIND` request, which the browser blocks unless the server explicitly allows it. Finder, rclone and curl are not browsers and are therefore not subject to CORS.
 
-A blocked request fails as an opaque `TypeError`, so WebDAV-Index can only report a short network
-error; the specific cause has to be read from the browser's developer tools:
+A blocked request fails as an opaque `TypeError`, so WebDAV-Index can only report a short network error; the specific cause has to be read from the browser's developer tools:
 
 1. In **Console**, look for a `blocked by CORS policy` message.
-2. In **Network**, inspect the `OPTIONS` preflight and the `PROPFIND` that follows. Common causes
-   are a response without `Access-Control-Allow-Origin`, or a method or header missing from
-   `Access-Control-Allow-Methods` / `Access-Control-Allow-Headers`.
+2. In **Network**, inspect the `OPTIONS` preflight and the `PROPFIND` that follows. Common causes are a response without `Access-Control-Allow-Origin`, or a method or header missing from `Access-Control-Allow-Methods` / `Access-Control-Allow-Headers`.
 
 > [!TIP]
-> WebDAV-Index is served over HTTPS, so a WebDAV URL beginning with `http://` is blocked by the
-> browser's mixed content policy.
+> WebDAV-Index is served over HTTPS, so a WebDAV URL beginning with `http://` is blocked by the browser's mixed content policy.
 
 [license]: LICENSE
 [license-badge]: https://img.shields.io/badge/License-MIT-blue?style=flat-square
