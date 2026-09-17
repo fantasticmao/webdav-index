@@ -34,18 +34,24 @@ indent_size = 2
 
 [{*.sql,*.cql,*.ddl}]
 indent_size = 2
+max_line_length = off
 
 [{*.html,*.xml}]
 indent_size = 4
+max_line_length = off
 
 [{*.yaml,*.yml}]
 indent_size = 2
+max_line_length = off
 
 [*.init]
 indent_size = 4
+max_line_length = off
 
 [*.http]
 indent_size = 2
+max_line_length = off
 
 [*.md]
 indent_size = 2
+max_line_length = off
