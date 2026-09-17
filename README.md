@@ -1,65 +1,82 @@
 # WebDAV Index
 
+[![License][license-badge]][license]
+[![Live demo][demo-badge]][demo]
+
 README [English](README.md) | [中文](README_ZH.md)
 
 ## What is this
 
-A local-first WebDAV client that browses remote files as a read-only list.
-
-Everything runs in the browser, so your personal data stays within reach from any device, at any time.
+WebDAV-Index is a local-first WebDAV client that browses remote files as a read-only list. It is
+static and requires no build step: a single HTML file and a few ES modules, with all dependencies
+loaded from a CDN. It runs entirely in the browser, communicates with the WebDAV server directly,
+and sends data to no third party.
 
 ![usage.png](usage.png)
 
-### Features
+WebDAV-Index provides browsing only: it lists directories, navigates into subdirectories and opens
+files, and it does not upload, edit, rename or delete. It opens each file through the browser,
+which renders `.jpg`, `.txt` and `.mp4` in place and downloads the rest.
 
-- [x] **List View**: files shown in a table with name, last modified time, and size
-- [x] **Authentication**: optional HTTP Basic authentication when the server requires it
-- [x] **Persistent Credentials**: username and password can be saved locally to `localStorage`
-- [x] **Connection Switching**: switch between saved connections without re-entering credentials
-- [x] **Mobile Friendly**: responsive layout that works on phones, tablets and desktops
+## Features
+
+- **Read-only listing**: renders each directory as a table of name, modified time and size
+- **Optional auth**: sends HTTP Basic credentials only when the server requires them
+- **Saved credentials**: stores credentials in `localStorage` and reuses them after a reload
+- **Multiple hosts**: records connected servers and switches between them from the navbar
+- **Responsive layout**: adapts to phone, tablet and desktop screen widths
 
 ## Download and Install
 
-Nothing to download or install — just open [https://webdav-index.fantasticmao.cn/](https://webdav-index.fantasticmao.cn/) in your browser.
+WebDAV-Index requires no download or installation: open
+[webdav-index.fantasticmao.cn][demo] in a browser and it is ready to use.
 
 ## Quick Start
 
-Enter the URL of your WebDAV service, along with a username and password if the service requires them, then click Connect.
+WebDAV-Index opens a connection form on first visit. Enter the URL of the WebDAV service, add a
+username and password if the server requires authentication, then click Connect.
 
 ![connect.png](connect.png)
 
-> **Note**: Your WebDAV service must have Cross-Origin Resource Sharing (CORS) enabled. At a minimum, it has to allow the `OPTIONS`, `PROPFIND`, and `GET` methods, and the `Authorization` and `Depth` request headers.
-
-WebDAV-Index lists remote directories and opens files straight from the browser, with no backend and no build step. Browsing is read-only: editing, uploading, and deleting files are out of scope. Whether a file such as `.mp4`, `.jpg`, or `.txt` can be previewed depends on the capabilities of the browser and on the content type the server returns.
+> [!IMPORTANT]
+> WebDAV-Index runs in the browser, so the WebDAV server must allow cross-origin requests: the
+> `OPTIONS`, `PROPFIND` and `GET` methods, plus the `Authorization` and `Depth` request headers.
+> Without them the connection cannot be established, however correct the URL is; see the FAQ below.
 
 ## How it works
 
-WebDAV-Index is built on the following major dependencies:
+WebDAV-Index is built on the following dependencies, all loaded from a CDN as native ES modules:
 
-- [webdav-client](https://github.com/perry-mitchell/webdav-client): sends WebDAV requests for listings and metadata directly from the browser.
-- [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage): keeps connection details and credentials locally for access and host switching.
-- [Bootstrap](https://getbootstrap.com/): supplies the UI components, grid system, and responsive styles for the layout.
-- [Alpine.js](https://alpinejs.dev/): manages UI state and user interactions in a declarative way from the browser.
+- [webdav-client]: lists directories and builds the URLs used to open a file
+- [localStorage]: keeps connected servers and their credentials on the local machine
+- [Bootstrap]: provides the table, navbar, dialog and responsive layout
+- [Alpine.js]: binds state and events declaratively, without a build step
 
-## Frequently Asked Questions
+## FAQ
 
-Q: Why does Connect fail even though the same URL works in another client?
+### Connect fails, but the same URL works in another client. Why?
 
-A: WebDAV-Index runs in the browser, so listing a directory is a cross-origin `PROPFIND` request. Clients such as Finder, rclone, or curl are not browsers and do not need CORS.
+WebDAV-Index runs in the browser, so listing a directory is a cross-origin `PROPFIND` request,
+which the browser blocks unless the server explicitly allows it. Finder, rclone and curl are not
+browsers and are therefore not subject to CORS.
 
-When the request is blocked, the app shows a short network error. The page cannot show the real CORS reason: `fetch` only rejects with an opaque `TypeError`. The detailed _blocked by CORS policy_ message appears only in the browser's developer tools.
+A blocked request fails as an opaque `TypeError`, so WebDAV-Index can only report a short network
+error; the specific cause has to be read from the browser's developer tools:
 
-To diagnose:
+1. In **Console**, look for a `blocked by CORS policy` message.
+2. In **Network**, inspect the `OPTIONS` preflight and the `PROPFIND` that follows. Common causes
+   are a response without `Access-Control-Allow-Origin`, or a method or header missing from
+   `Access-Control-Allow-Methods` / `Access-Control-Allow-Headers`.
 
-1. Open DevTools (F12) -> Console and look for `blocked by CORS policy`.
-2. In the Network tab, inspect the `OPTIONS` preflight, then `PROPFIND`. Typical failures are a missing `Access-Control-Allow-Origin` header, a method not listed in `Access-Control-Allow-Methods`, or `Authorization` / `Depth` missing from `Access-Control-Allow-Headers`.
+> [!TIP]
+> WebDAV-Index is served over HTTPS, so a WebDAV URL beginning with `http://` is blocked by the
+> browser's mixed content policy.
 
-The server must allow the `OPTIONS`, `PROPFIND`, and `GET` methods, and the `Authorization` and `Depth` request headers.
-
-Also check mixed content: the GitHub Pages app is served over HTTPS, so an `http://` WebDAV URL is blocked the same way.
-
-## License
-
-WebDAV-Index [License](https://github.com/fantasticmao/webdav-index/blob/main/LICENSE)
-
-Copyright (c) 2026 fantasticmao
+[license]: LICENSE
+[license-badge]: https://img.shields.io/badge/License-MIT-blue?style=flat-square
+[demo]: https://webdav-index.fantasticmao.cn/
+[demo-badge]: https://img.shields.io/badge/Live_demo-online-0d6efd?style=flat-square
+[webdav-client]: https://github.com/perry-mitchell/webdav-client
+[localStorage]: https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
+[Bootstrap]: https://getbootstrap.com/
+[Alpine.js]: https://alpinejs.dev/
