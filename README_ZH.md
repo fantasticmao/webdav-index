@@ -1,7 +1,7 @@
 # WebDAV Index
 
-[![License][license-badge]][license]
-[![Live demo][demo-badge]][demo]
+[![License](https://img.shields.io/github/license/fantasticmao/webdav-index)](LICENSE)
+[![Live demo](https://img.shields.io/badge/live_demo-online-blue)](https://webdav-index.fantasticmao.cn/)
 
 README [English](README.md) | [中文](README_ZH.md)
 
@@ -23,7 +23,7 @@ WebDAV-Index 只提供浏览功能：列出目录、进入子目录、打开文�
 
 ## 下载安装
 
-WebDAV-Index 无需下载和安装，在浏览器中打开 [webdav-index.fantasticmao.cn][demo] 即可使用。
+WebDAV-Index 无需下载和安装，在浏览器中打开 [webdav-index.fantasticmao.cn](https://webdav-index.fantasticmao.cn/) 即可使用。
 
 ## 快速开始
 
@@ -38,10 +38,10 @@ WebDAV-Index 在首次访问时会弹出连接表单。填写 WebDAV 服务的 U
 
 WebDAV-Index 基于以下依赖构建，它们均以原生 ES 模块的形式从 CDN 加载：
 
-- [webdav-client]：列出目录，并生成打开文件所用的 URL
-- [localStorage]：将已连接的服务地址与凭证保存在本机
-- [Bootstrap]：提供表格、顶栏、弹窗与响应式布局
-- [Alpine.js]：以声明式的方式绑定状态与事件
+- [webdav-client](https://github.com/perry-mitchell/webdav-client)：列出目录，并生成打开文件所用的 URL
+- [localStorage](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/localStorage)：将已连接的服务地址与凭证保存在本机
+- [Bootstrap](https://getbootstrap.com/)：提供表格、顶栏、弹窗与响应式布局
+- [Alpine.js](https://alpinejs.dev/)：以声明式的方式绑定状态与事件
 
 ## 常见问题
 
@@ -57,11 +57,6 @@ WebDAV-Index 运行在浏览器中，列出目录是一次跨域 `PROPFIND` 请�
 > [!TIP]
 > WebDAV-Index 通过 HTTPS 提供服务，因此以 `http://` 开头的 WebDAV 地址会因混合内容策略被浏览器拦截。
 
-[license]: LICENSE
-[license-badge]: https://img.shields.io/badge/License-MIT-blue?style=flat-square
-[demo]: https://webdav-index.fantasticmao.cn/
-[demo-badge]: https://img.shields.io/badge/Live_demo-online-0d6efd?style=flat-square
-[webdav-client]: https://github.com/perry-mitchell/webdav-client
-[localStorage]: https://developer.mozilla.org/zh-CN/docs/Web/API/Window/localStorage
-[Bootstrap]: https://getbootstrap.com/
-[Alpine.js]: https://alpinejs.dev/
+## 许可证
+
+WebDAV-Index 以 MIT License 发布，详见 [LICENSE](LICENSE)。

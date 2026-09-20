@@ -1,7 +1,7 @@
 # WebDAV Index
 
-[![License][license-badge]][license]
-[![Live demo][demo-badge]][demo]
+[![License](https://img.shields.io/github/license/fantasticmao/webdav-index)](LICENSE)
+[![Live demo](https://img.shields.io/badge/live_demo-online-blue)](https://webdav-index.fantasticmao.cn/)
 
 README [English](README.md) | [中文](README_ZH.md)
 
@@ -23,7 +23,7 @@ WebDAV-Index provides browsing only: it lists directories, navigates into subdir
 
 ## Download and Install
 
-WebDAV-Index requires no download or installation: open [webdav-index.fantasticmao.cn][demo] in a browser and it is ready to use.
+WebDAV-Index requires no download or installation: open [webdav-index.fantasticmao.cn](https://webdav-index.fantasticmao.cn/) in a browser and it is ready to use.
 
 ## Quick Start
 
@@ -38,10 +38,10 @@ WebDAV-Index opens a connection form on first visit. Enter the URL of the WebDAV
 
 WebDAV-Index is built on the following dependencies, all loaded from a CDN as native ES modules:
 
-- [webdav-client]: lists directories and builds the URLs used to open a file
-- [localStorage]: keeps connected servers and their credentials on the local machine
-- [Bootstrap]: provides the table, navbar, dialog and responsive layout
-- [Alpine.js]: binds state and events declaratively, without a build step
+- [webdav-client](https://github.com/perry-mitchell/webdav-client): lists directories and builds the URLs used to open a file
+- [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage): keeps connected servers and their credentials on the local machine
+- [Bootstrap](https://getbootstrap.com/): provides the table, navbar, dialog and responsive layout
+- [Alpine.js](https://alpinejs.dev/): binds state and events declaratively, without a build step
 
 ## FAQ
 
@@ -57,11 +57,6 @@ A blocked request fails as an opaque `TypeError`, so WebDAV-Index can only repor
 > [!TIP]
 > WebDAV-Index is served over HTTPS, so a WebDAV URL beginning with `http://` is blocked by the browser's mixed content policy.
 
-[license]: LICENSE
-[license-badge]: https://img.shields.io/badge/License-MIT-blue?style=flat-square
-[demo]: https://webdav-index.fantasticmao.cn/
-[demo-badge]: https://img.shields.io/badge/Live_demo-online-0d6efd?style=flat-square
-[webdav-client]: https://github.com/perry-mitchell/webdav-client
-[localStorage]: https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
-[Bootstrap]: https://getbootstrap.com/
-[Alpine.js]: https://alpinejs.dev/
+## License
+
+WebDAV-Index is released under the MIT License; see [LICENSE](LICENSE).
