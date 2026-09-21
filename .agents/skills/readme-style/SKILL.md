@@ -21,7 +21,7 @@ Rewrite an existing README into the style below instead of preserving it: reorga
 
 - Header order: title, badge row, language switcher line.
 - Usual section order: What is this / Features / Download and Install / Quick Start / How it works / FAQ / Contributing / Changelog / License.
-- Give each FAQ entry its own `###` subsection so later ones can be appended. Keep the section flat: no table of contents, no `<details>`, no manual numbering.
+- Give each FAQ entry its own `###` subsection so later ones can be appended. Keep the section flat: no table of contents, no `<details>`, no manual numbering. Ask Why about the phenomenon; answer in two sentences: cause, then remedy.
 - "How it works" explains how the project is put together. Where its structure is worth describing, add two optional `###` subsections: the architecture, covering the split into modules and each one's responsibility; and the core flow, walking through a main flow in order, with a mermaid diagram where it helps. Both stay at design level: no code, no file inventory.
 - If `LICENSE`, `CONTRIBUTING` or `CHANGELOG` exists, close the README with a one-sentence section for each and link to that file; do not copy their contents. Omit a section when the file is absent.
 
