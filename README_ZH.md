@@ -42,17 +42,19 @@ WebDAV-Index 基于以下依赖构建，它们均以原生 ES 模块的形式从
 
 ## 常见问题
 
+当 WebDAV-Index 提示浏览器拦截了请求时，原因是下列之一。
+
 ### 为什么同一个 URL 在别的客户端能用，这里 Connect 却失败？
 
-WebDAV-Index 使用跨域 `PROPFIND` 列出目录，但该请求已被 CORS 策略阻止。需要让 WebDAV 服务端放行 `OPTIONS` 与 `PROPFIND` 请求方法，使 `Access-Control-Allow-Origin` 匹配当前源，并在 `Access-Control-Allow-Headers` 中包含 `Depth`（有凭证时再加 `Authorization`）。
+WebDAV-Index 使用跨源 `PROPFIND` 列出目录，服务端未允许时 CORS 会拦截该请求。需要放行 `OPTIONS` 与 `PROPFIND`，使 `Access-Control-Allow-Origin` 匹配当前源，并在 `Access-Control-Allow-Headers` 中包含 `Depth`（有凭证时再加 `Authorization`）。
 
-### 为什么 `http://` 的 WebDAV 地址会被拒绝？
+### 为什么从 `https://` 源访问 `http://` 的 WebDAV 地址会被拒绝？
 
-根据 Mixed-Content 策略，来自 `https://` 源的 `http://` 请求将被阻止。可以使用 `http://` 访问本站，或在网站设置中允许不安全内容，或使用 `https://` 提供 WebDAV 服务。
+Mixed Content 策略会拦截来自 HTTPS 源的 HTTP 请求；Chrome 与 Firefox 对 loopback（`127.0.0.1`、`localhost`、`[::1]`）予以豁免，Safari 仍可能拦截 loopback。三选一：用 `http://` 打开本站，在站点设置中允许不安全内容，或让 WebDAV 以 HTTPS 提供。
 
-### 为什么家用 NAS / 局域网地址从线上站点连不上？
+### 为什么家用 NAS、局域网或 loopback 地址从线上站点连不上？
 
-根据 Private-Network-Access 策略，来自公网源到私有地址的请求将被阻止。需要让 WebDAV 服务端返回 `Access-Control-Allow-Private-Network` 响应头。
+当公网源访问私网或 loopback 地址时适用 Local Network Access，Chrome 可能弹出权限提示。若浏览器询问则允许本地网络访问；服务端仍须满足 CORS。
 
 ## 许可证
 

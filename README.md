@@ -42,17 +42,19 @@ WebDAV-Index is built on the following dependencies, all loaded from a CDN as na
 
 ## FAQ
 
+When WebDAV-Index reports that the browser blocked the request, the cause is one of the following.
+
 ### Why does Connect fail when the same URL works in another client?
 
-WebDAV-Index lists directories with a cross-origin `PROPFIND` request, which is blocked by CORS policy. Allow `OPTIONS` and `PROPFIND` request methods on the WebDAV server, match `Access-Control-Allow-Origin` to this origin, and include `Depth` in `Access-Control-Allow-Headers` (`Authorization` when credentials are sent).
+WebDAV-Index lists directories with a cross-origin `PROPFIND`, so CORS blocks the request unless the server opts in. Allow `OPTIONS` and `PROPFIND`, match `Access-Control-Allow-Origin` to this origin, and include `Depth` in `Access-Control-Allow-Headers` (`Authorization` when credentials are sent).
 
-### Why is an `http://` WebDAV URL rejected?
+### Why is an `http://` WebDAV URL rejected from an `https://` origin?
 
-An `http://` request from an `https://` origin is blocked by Mixed-Content policy. Use this site over `http://`, or allow Insecure content in site settings, or serve WebDAV over `https://`.
+Mixed Content policy blocks an HTTPS origin from requesting HTTP, except loopback (`127.0.0.1`, `localhost`, `[::1]`) in Chrome and Firefox, Safari may still block loopback. Use **one** of: open this project over `http://`, allow Insecure content in site settings, or serve WebDAV over HTTPS.
 
-### Why does a home NAS or LAN URL fail from the live site?
+### Why does a home NAS, LAN, or loopback URL fail from the live site?
 
-A request from a public origin to a private address is blocked by Private-Network-Access policy. Return the `Access-Control-Allow-Private-Network` response header from the WebDAV server.
+Local Network Access applies when a public origin reaches a private or loopback address, and Chrome may prompt for permission. Allow local network access if the browser asks; the server must still satisfy CORS.
 
 ## License
 

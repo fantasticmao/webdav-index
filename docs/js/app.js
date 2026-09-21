@@ -30,6 +30,7 @@ Alpine.data("app", () => ({
   autofilledHost: "",
   connecting: false,
   connectError: "",
+  connectErrorCode: "",
   connectCancellable: false,
   showValidation: false,
 
@@ -39,6 +40,7 @@ Alpine.data("app", () => ({
   entries: [],
   loading: false,
   errorMessage: "",
+  errorCode: "",
   /** Incremented per load so a superseded request cannot clobber newer state. */
   loadToken: 0,
 
@@ -132,6 +134,7 @@ Alpine.data("app", () => ({
     this.baseUrl = null;
     this.entries = [];
     this.errorMessage = "";
+    this.errorCode = "";
 
     if (remaining.length > 0) {
       this.switchHost(remaining[0]);
@@ -191,6 +194,7 @@ Alpine.data("app", () => ({
     this.autofilledHost = "";
     this.applySavedCredentials();
     this.connectError = "";
+    this.connectErrorCode = "";
     this.showValidation = false;
     this.$refs.inputUrl.setCustomValidity("");
 
@@ -210,6 +214,7 @@ Alpine.data("app", () => ({
 
   async connect() {
     this.connectError = "";
+    this.connectErrorCode = "";
     this.syncUrlValidity();
     if (!this.$refs.connectForm.checkValidity()) {
       this.showValidation = true;
@@ -238,6 +243,7 @@ Alpine.data("app", () => ({
       this.load();
     } catch (err) {
       this.connectError = err.message || "Connection failed";
+      this.connectErrorCode = err.code || "";
     } finally {
       this.connecting = false;
     }
@@ -275,6 +281,7 @@ Alpine.data("app", () => ({
     this.path = getPath();
     this.entries = [];
     this.errorMessage = "";
+    this.errorCode = "";
     this.loading = true;
     const token = ++this.loadToken;
 
@@ -292,6 +299,7 @@ Alpine.data("app", () => ({
       }
       this.loading = false;
       this.errorMessage = err.message || "Failed to load";
+      this.errorCode = err.code || "";
     }
   },
 

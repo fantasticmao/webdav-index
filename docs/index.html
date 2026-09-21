@@ -135,7 +135,11 @@
             </div>
 
             <div class="card-body" x-show="errorMessage" x-cloak>
-                <div class="alert alert-danger mb-0" role="alert" x-text="errorMessage"></div>
+                <div class="alert alert-danger mb-0" role="alert">
+                    <span x-text="errorMessage"></span>
+                    <a class="alert-link ms-1" href="https://github.com/fantasticmao/webdav-index#faq" target="_blank"
+                        rel="noopener noreferrer" x-show="errorCode === 'NETWORK'" x-cloak>See the FAQ</a>
+                </div>
             </div>
 
             <div class="table-responsive" x-show="!loading && !errorMessage" x-cloak>
@@ -211,8 +215,11 @@
                             <input type="password" class="form-control" id="input-password" name="password"
                                 autocomplete="current-password" x-model="form.password" />
                         </div>
-                        <div class="alert alert-warning mt-3 mb-0" role="alert" x-show="connectError" x-cloak
-                            x-text="connectError">
+                        <div class="alert alert-warning mt-3 mb-0" role="alert" x-show="connectError" x-cloak>
+                            <span x-text="connectError"></span>
+                            <a class="alert-link ms-1" href="https://github.com/fantasticmao/webdav-index#faq"
+                                target="_blank" rel="noopener noreferrer" x-show="connectErrorCode === 'NETWORK'"
+                                x-cloak>See the FAQ</a>
                         </div>
                     </div>
                     <div class="modal-footer">

@@ -1,5 +1,4 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/webdav@5.10.0/dist/web/index.js";
-import { isMixedContentRequest, isPrivateNetworkAccess } from "./config.js";
 
 function normalizeCredentials(credentials) {
   return {
@@ -60,7 +59,7 @@ export async function listDirectory(baseUrl, relativePath, credentials) {
     // server that omits `getcontentlength` (both surface as `size: 0`).
     result = await client.getDirectoryContents(currentPath, { details: true });
   } catch (err) {
-    throw toAppError(err, isAnonymous(creds), baseUrl);
+    throw toAppError(err, isAnonymous(creds));
   }
 
   return result.data
@@ -105,9 +104,10 @@ function compareEntries(a, b) {
 /**
  * Translate client errors into the `code`-tagged errors the app branches on. The client
  * throws `Error` with `status` for HTTP failures, and lets `fetch` rejections
- * (network / CORS / mixed content / PNA) through as `TypeError`.
+ * (CORS / mixed content / local network access) through as `TypeError`. Those policies
+ * cannot be told apart from the exception, so they share one message and the FAQ.
  */
-function toAppError(err, anonymous, baseUrl) {
+function toAppError(err, anonymous) {
   const status = err?.status;
 
   if (status === 401) {
@@ -129,30 +129,8 @@ function toAppError(err, anonymous, baseUrl) {
   }
 
   if (err?.name === "TypeError") {
-    // Mixed content first: HTTPS page + HTTP WebDAV, even when the host is also private.
-    if (isMixedContentRequest(baseUrl)) {
-      const error = new Error(
-        `Mixed-Content: HTTPS origin sent an HTTP request. ` +
-          `Use ${window.location.href.replace(/^https:/, "http:")}, ` +
-          "or allow Insecure content, or serve WebDAV over HTTPS.",
-      );
-      error.code = "MIXED";
-      error.cause = err;
-      return error;
-    }
-    if (isPrivateNetworkAccess(baseUrl)) {
-      const error = new Error(
-        "Private-Network-Access: public origin reached a private address. " +
-          "Return Access-Control-Allow-Private-Network.",
-      );
-      error.code = "PNA";
-      error.cause = err;
-      return error;
-    }
     const error = new Error(
-      "CORS: cross-origin PROPFIND blocked. Allow OPTIONS and PROPFIND, " +
-        "match Access-Control-Allow-Origin, and include Depth " +
-        "(Authorization when credentials are sent).",
+      "Network: the browser blocked the request (CORS, Mixed Content, or Local Network Access).",
     );
     error.code = "NETWORK";
     error.cause = err;
