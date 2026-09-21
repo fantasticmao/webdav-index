@@ -88,3 +88,36 @@ export function setPath(path) {
     window.history.pushState(null, "", href);
   }
 }
+
+export function isMixedContentRequest(baseUrl) {
+  if (window.location.protocol !== "https:") return false;
+  try {
+    return new URL(baseUrl).protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+export function isPrivateNetworkAccess(baseUrl) {
+  if (isPrivateOrLocalHostname(window.location.hostname)) return false;
+  try {
+    return isPrivateOrLocalHostname(new URL(baseUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isPrivateOrLocalHostname(hostname) {
+  const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
+    return true;
+  }
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (host === "::1") return true;
+  // IPv6 ULA fc00::/7 and link-local fe80::/10.
+  if (/^f[cd][0-9a-f]{2}:/.test(host) || /^fe[89ab][0-9a-f]:/.test(host)) return true;
+  return false;
+}

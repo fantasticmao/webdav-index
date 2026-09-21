@@ -31,9 +31,6 @@ WebDAV-Index opens a connection form on first visit. Enter the URL of the WebDAV
 
 ![connect.png](connect.png)
 
-> [!IMPORTANT]
-> WebDAV-Index runs in the browser, so the WebDAV server must allow cross-origin requests: the `OPTIONS`, `PROPFIND` and `GET` methods, plus the `Authorization` and `Depth` request headers. Without them the connection cannot be established, however correct the URL is; see the FAQ below.
-
 ## How it works
 
 WebDAV-Index is built on the following dependencies, all loaded from a CDN as native ES modules:
@@ -45,17 +42,17 @@ WebDAV-Index is built on the following dependencies, all loaded from a CDN as na
 
 ## FAQ
 
-### Connect fails, but the same URL works in another client. Why?
+### Why does Connect fail when the same URL works in another client?
 
-WebDAV-Index runs in the browser, so listing a directory is a cross-origin `PROPFIND` request, which the browser blocks unless the server explicitly allows it. Finder, rclone and curl are not browsers and are therefore not subject to CORS.
+WebDAV-Index lists directories with a cross-origin `PROPFIND` request, which is blocked by CORS policy. Allow `OPTIONS` and `PROPFIND` request methods on the WebDAV server, match `Access-Control-Allow-Origin` to this origin, and include `Depth` in `Access-Control-Allow-Headers` (`Authorization` when credentials are sent).
 
-A blocked request fails as an opaque `TypeError`, so WebDAV-Index can only report a short network error; the specific cause has to be read from the browser's developer tools:
+### Why is an `http://` WebDAV URL rejected?
 
-1. In **Console**, look for a `blocked by CORS policy` message.
-2. In **Network**, inspect the `OPTIONS` preflight and the `PROPFIND` that follows. Common causes are a response without `Access-Control-Allow-Origin`, or a method or header missing from `Access-Control-Allow-Methods` / `Access-Control-Allow-Headers`.
+An `http://` request from an `https://` origin is blocked by Mixed-Content policy. Use this site over `http://`, or allow Insecure content in site settings, or serve WebDAV over `https://`.
 
-> [!TIP]
-> WebDAV-Index is served over HTTPS, so a WebDAV URL beginning with `http://` is blocked by the browser's mixed content policy.
+### Why does a home NAS or LAN URL fail from the live site?
+
+A request from a public origin to a private address is blocked by Private-Network-Access policy. Return the `Access-Control-Allow-Private-Network` response header from the WebDAV server.
 
 ## License
 

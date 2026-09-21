@@ -1,4 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/webdav@5.10.0/dist/web/index.js";
+import { isMixedContentRequest, isPrivateNetworkAccess } from "./config.js";
 
 function normalizeCredentials(credentials) {
   return {
@@ -59,7 +60,7 @@ export async function listDirectory(baseUrl, relativePath, credentials) {
     // server that omits `getcontentlength` (both surface as `size: 0`).
     result = await client.getDirectoryContents(currentPath, { details: true });
   } catch (err) {
-    throw toAppError(err, isAnonymous(creds));
+    throw toAppError(err, isAnonymous(creds), baseUrl);
   }
 
   return result.data
@@ -104,16 +105,14 @@ function compareEntries(a, b) {
 /**
  * Translate client errors into the `code`-tagged errors the app branches on. The client
  * throws `Error` with `status` for HTTP failures, and lets `fetch` rejections
- * (network / CORS) through as `TypeError`.
+ * (network / CORS / mixed content / PNA) through as `TypeError`.
  */
-function toAppError(err, anonymous) {
+function toAppError(err, anonymous, baseUrl) {
   const status = err?.status;
 
-  if (status === 401 || status === 403) {
+  if (status === 401) {
     const error = new Error(
-      anonymous
-        ? "This server requires a username and password."
-        : "Incorrect username or password.",
+      anonymous ? "Auth: username and password required." : "Auth: incorrect username or password.",
     );
     error.code = "AUTH";
     error.status = status;
@@ -130,26 +129,47 @@ function toAppError(err, anonymous) {
   }
 
   if (err?.name === "TypeError") {
+    // Mixed content first: HTTPS page + HTTP WebDAV, even when the host is also private.
+    if (isMixedContentRequest(baseUrl)) {
+      const error = new Error(
+        `Mixed-Content: HTTPS origin sent an HTTP request. ` +
+          `Use ${window.location.href.replace(/^https:/, "http:")}, ` +
+          "or allow Insecure content, or serve WebDAV over HTTPS.",
+      );
+      error.code = "MIXED";
+      error.cause = err;
+      return error;
+    }
+    if (isPrivateNetworkAccess(baseUrl)) {
+      const error = new Error(
+        "Private-Network-Access: public origin reached a private address. " +
+          "Return Access-Control-Allow-Private-Network.",
+      );
+      error.code = "PNA";
+      error.cause = err;
+      return error;
+    }
     const error = new Error(
-      "Unable to reach the WebDAV server. If the URL is correct, this is often a CORS issue — see the FAQ in the project README.",
+      "CORS: cross-origin PROPFIND blocked. Allow OPTIONS and PROPFIND, " +
+        "match Access-Control-Allow-Origin, and include Depth " +
+        "(Authorization when credentials are sent).",
     );
     error.code = "NETWORK";
     error.cause = err;
     return error;
   }
 
-  const error = new Error("The WebDAV server responded, but the listing could not be read.");
+  const error = new Error("Parse: directory listing could not be read.");
   error.code = "PARSE";
   error.cause = err;
   return error;
 }
 
 function httpErrorMessage(status) {
-  if (status === 404) return "This path was not found on the WebDAV server.";
-  if (status === 405) {
-    return "The server rejected PROPFIND (HTTP 405). It may not be a WebDAV endpoint.";
-  }
-  return `The WebDAV server returned HTTP ${status}.`;
+  if (status === 403) return "HTTP 403: access denied.";
+  if (status === 404) return "HTTP 404: path not found.";
+  if (status === 405) return "HTTP 405: PROPFIND rejected; not a WebDAV endpoint.";
+  return `HTTP ${status}: unexpected response.`;
 }
 
 /**

@@ -31,9 +31,6 @@ WebDAV-Index 在首次访问时会弹出连接表单。填写 WebDAV 服务的 U
 
 ![connect.png](connect.png)
 
-> [!IMPORTANT]
-> WebDAV-Index 运行在浏览器中，因此 WebDAV 服务端必须允许跨域请求：放行 `OPTIONS`、`PROPFIND`、`GET` 方法，以及 `Authorization`、`Depth` 请求头。否则即使 URL 完全正确，连接也无法建立，详见下文的常见问题。
-
 ## 实现原理
 
 WebDAV-Index 基于以下依赖构建，它们均以原生 ES 模块的形式从 CDN 加载：
@@ -45,17 +42,17 @@ WebDAV-Index 基于以下依赖构建，它们均以原生 ES 模块的形式从
 
 ## 常见问题
 
-### 同一个 URL 在别的客户端能用，这里 Connect 却失败，为什么？
+### 为什么同一个 URL 在别的客户端能用，这里 Connect 却失败？
 
-WebDAV-Index 运行在浏览器中，列出目录是一次跨域 `PROPFIND` 请求，若服务端未明确放行，浏览器会直接拦截该请求。Finder、rclone、curl 不是浏览器，因此不受 CORS 限制。
+WebDAV-Index 使用跨域 `PROPFIND` 列出目录，但该请求已被 CORS 策略阻止。需要让 WebDAV 服务端放行 `OPTIONS` 与 `PROPFIND` 请求方法，使 `Access-Control-Allow-Origin` 匹配当前源，并在 `Access-Control-Allow-Headers` 中包含 `Depth`（有凭证时再加 `Authorization`）。
 
-被拦截的请求只会以不透明的 `TypeError` 失败，因此 WebDAV-Index 只能给出一条简短的网络错误提示，具体原因需要在浏览器的开发者工具中查看：
+### 为什么 `http://` 的 WebDAV 地址会被拒绝？
 
-1. 在 **Console** 中查找 `blocked by CORS policy` 日志。
-2. 在 **Network** 中检查 `OPTIONS` 预检及随后的 `PROPFIND` 请求。常见原因是响应缺少 `Access-Control-Allow-Origin`，或所用的方法、请求头未包含在 `Access-Control-Allow-Methods` / `Access-Control-Allow-Headers` 中。
+根据 Mixed-Content 策略，来自 `https://` 源的 `http://` 请求将被阻止。可以使用 `http://` 访问本站，或在网站设置中允许不安全内容，或使用 `https://` 提供 WebDAV 服务。
 
-> [!TIP]
-> WebDAV-Index 通过 HTTPS 提供服务，因此以 `http://` 开头的 WebDAV 地址会因混合内容策略被浏览器拦截。
+### 为什么家用 NAS / 局域网地址从线上站点连不上？
+
+根据 Private-Network-Access 策略，来自公网源到私有地址的请求将被阻止。需要让 WebDAV 服务端返回 `Access-Control-Allow-Private-Network` 响应头。
 
 ## 许可证
 
